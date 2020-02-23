@@ -22,23 +22,20 @@ def loadData(directory, width, length, height):
     print('Done!')
     
     return trainingData
-result = loadData(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet', 16, 16, 1)
-flag = 0
+def plot3D(result):
+    for i in result:
+        fig = plt.figure()
+        axis = plt.axes(projection='3d')
+        x = range(0, 16)
+        y= range(0, 16)
+        xData, yData = np.meshgrid(x, y)
+        zData = i[x, y]
+        surface = axis.plot_surface(xData, yData, zData, rstride=1, cstride=1, cmap='coolwarm_r')
+        fig.colorbar(surface, shrink=1.0, aspect=20)
+        plt.show()
+#result = loadData(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet', 16, 16, 1)
 
-for i in result:
-    print("Data: ", flag)
-    print("Std: ", i.std())
-    print("Mean: ", i.mean())
-    flag += 1
-    print(i.shape)
-    fig = plt.figure()
-    axis = plt.axes(projection='3d')
-    x = range(0, 16)
-    y= range(0, 16)
-    xData, yData = np.meshgrid(x, y)
-    zData = i[x, y]
-    surface = axis.plot_surface(xData, yData, zData, rstride=1, cstride=1, cmap='coolwarm_r')
-    fig.colorbar(surface, shrink=1.0, aspect=20)
-    plt.show()
+
+
 
 
