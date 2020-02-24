@@ -119,6 +119,7 @@ class CustomLayer(tf.keras.layers.Layer):
         #建立權重的地方
         pass
     def call(self, inputs):
+        #定義網路前向傳遞
         pass
     def get_config(self):
         pass
