@@ -110,6 +110,18 @@ def main():
        GANs.training(1000, 30)
 
 
+#範本
+class CustomLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(CustomLayer, self).__init__(**kwargs)
+        pass
+    def build(self, inputshape):
+        pass
+    def call(self, inputs):
+        pass
+    def get_config(self):
+        pass
+
 
 main()
 
