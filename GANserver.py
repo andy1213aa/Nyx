@@ -116,6 +116,7 @@ class CustomLayer(tf.keras.layers.Layer):
         super(CustomLayer, self).__init__(**kwargs)
         pass
     def build(self, inputshape):
+        #建立權重的地方
         pass
     def call(self, inputs):
         pass
