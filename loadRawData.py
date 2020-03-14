@@ -2,17 +2,17 @@ import  numpy as np
 import os 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-def loadData(directory, width, length, height):
+def loadData(directory, width, length):
     g = os.walk(directory)
     flag = 0
     for path, dirList, fileList in g:
-        trainingData = np.zeros((30, width, length, height))
+        trainingData = np.zeros((30, width, length))
         print(f'You have {len(fileList)} data.')     
         for data in fileList:
             print(f'Starting Loging data {flag}', end='\r')
             load_data = np.fromfile(directory + '\\' + data, dtype = 'float32').reshape((256, 256, 256))
             
-            load_data_16x16 = load_data[120:136, 120:136, 128:129]
+            load_data_16x16 = load_data[120:136, 120:136, 128]
             
             trainingData[flag] = load_data_16x16
             flag += 1
@@ -33,10 +33,22 @@ def plot3D(result):
         surface = axis.plot_surface(xData, yData, zData, rstride=1, cstride=1, cmap='coolwarm_r')
         fig.colorbar(surface, shrink=1.0, aspect=20)
         plt.show()
-result = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx', 16, 16, 1)
+#result = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx\NyxDataSet', 16, 16)
 
-for i in result:
-    print(f'{i} mean: ', np.mean(i))
-    print(f'{i} std: ', np.std(i))
+# start = 0
+
+# iteration = 10
+# for step in range(iteration):
+#     batch = result[start: start+3]
+#     print('batch size: ', batch.shape)
+#     for i in range(16):
+#         mean = np.mean(batch[:, i, :, 0])
+#         std = np.std(batch[:, i, :, 0])
+#         print(batch[:, i, :, 0])
+#         batch[:, i, :, 0] = (batch[:, i, :, 0]-mean) / std
+#         print(batch[:, i, :, 0])
+#         break
+#     break
+    #print(f'{i} std: ', np.std(i))
 
 
