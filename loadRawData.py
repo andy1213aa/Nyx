@@ -33,9 +33,10 @@ def plot3D(result):
         surface = axis.plot_surface(xData, yData, zData, rstride=1, cstride=1, cmap='coolwarm_r')
         fig.colorbar(surface, shrink=1.0, aspect=20)
         plt.show()
-#result = loadData(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet', 16, 16, 1)
+result = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx', 16, 16, 1)
 
-
-
+for i in result:
+    print(f'{i} mean: ', np.mean(i))
+    print(f'{i} std: ', np.std(i))
 
 
