@@ -7,8 +7,10 @@ from IPython.display import Image
 from loadRawData import loadData
 
 class GAN():
-    def __init__(self):
-        
+    def __init__(self, height, weight):
+        self.height = height
+        self.weight = weight
+
         self.gen = self.generator()
         self.dis = self.discriminator()
         self.discriminatorOptimizer = keras.optimizers.RMSprop(lr = 0.0008, 
@@ -50,7 +52,7 @@ class GAN():
         concatenate = layers.concatenate(inputs = [h1_3, h2_3, h3_3])
 
         f1_1 = layers.Dense(512, activation = 'relu')(concatenate)
-        f1_2 = layers.Dense(128, activation = 'relu')(f1_1)
+        f1_2 = layers.Dense(256, activation = 'relu')(f1_1)
         f1_3 = layers.Reshape((16, 16))(f1_2)
 
 
@@ -70,10 +72,39 @@ class GAN():
         model = keras.Model(inputs = dataInput, outputs = d1_4)
         plot_model(model, to_file = "Discriminator.png", show_shapes=True)
         return model
-    def training(self, epoch, batchsize):
-        #rawData = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx\NyxDataSet', 16, 16)
-        pass
+    def training(self, epochs, batchsize):
+        rawData = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx\NyxDataSet', self.height, self.weight)
+        for epoch in range(epochs):
+            start = 0
+            training = True
+            while training:
+                noise1 = np.random.normal(size = (batchsize, 1))
+                noise2 = np.random.normal(size = (batchsize, 1))
+                noise3 = np.random.normal(size = (batchsize, 1))
+                batch = rawData[start:start + batchsize]
+                
+                # Feature scalling
+                for i in range(16):         # number of 16 Depends on dimension of raw data we load.
+                    mean = np.mean(batch[:, i, :])
+                    std = np.std(batch[:, i, :])
+                    batch[:, i, :] = (batch[:, i, :] - mean) / std
+                
+                fakeData = self.gen.predict([noise1, noise2, noise3])
+                combineData = np.concatenate([batch, fakeData])
+                combineLabel = np.concatenate([np.ones((batchsize, 1)), np.zeros((batchsize, 1))])
+                dLoss = self.dis.train_on_batch(combineData, combineLabel)
+                gLoss = self.gan.train_on_batch([noise1, noise2, noise3], np.ones((batchsize, 1)))
+
+                print("======================================================================")
+                print(f"Epoch: {epoch}, Batch: {start/batchsize}, Discriminator loss: {dLoss}")    
+                print(f"Epoch: {epoch}, Batch: {start/batchsize}, GAN loss: {gLoss}")
+                print("======================================================================")
+                
+                start += batchsize
+                if start + batchsize >= rawData.shape[0]:
+                    training = False
 
 
-GAN = GAN()
 
+GAN = GAN(16, 16)
+GAN.training(10000, 30)

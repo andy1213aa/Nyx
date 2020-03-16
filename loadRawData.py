@@ -6,7 +6,7 @@ def loadData(directory, width, length):
     g = os.walk(directory)
     flag = 0
     for path, dirList, fileList in g:
-        trainingData = np.zeros((30, width, length))
+        trainingData = np.zeros((len(fileList), width, length))
         print(f'You have {len(fileList)} data.')     
         for data in fileList:
             print(f'Starting Loging data {flag}', end='\r')
@@ -16,8 +16,8 @@ def loadData(directory, width, length):
             
             trainingData[flag] = load_data_16x16
             flag += 1
-            if flag == 30:
-                break
+            # if flag == 30:
+            #     break
     print('')
     print('Done!')
     
