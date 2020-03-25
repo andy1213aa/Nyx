@@ -2,22 +2,20 @@ import  numpy as np
 import os 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-def loadData(directory, width, length):
+def loadData(directory, width, length, height):
     g = os.walk(directory)
     flag = 0
     for path, dirList, fileList in g:
-        trainingData = np.zeros((len(fileList), width, length))
+        trainingData = np.zeros((len(fileList), width, length, height))
         print(f'You have {len(fileList)} data.')     
         for data in fileList:
             print(f'Starting Loging data {flag}', end='\r')
             load_data = np.fromfile(directory + '\\' + data, dtype = 'float32').reshape((256, 256, 256))
             
-            load_data_16x16 = load_data[120:136, 120:136, 128]
-            
-            trainingData[flag] = load_data_16x16
+            trainingData[flag] = load_data[120:136, 120:136, 120:136]
             flag += 1
-            # if flag == 30:
-            #     break
+            if flag == 30:
+                break
     print('')
     print('Done!')
     

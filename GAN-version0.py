@@ -73,7 +73,7 @@ class GAN():
         plot_model(model, to_file = "Discriminator.png", show_shapes=True)
         return model
     def training(self, epochs, batchsize):
-        rawData = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx\NyxDataSet', self.height, self.weight)
+        rawData = loadData(r'E:\NTNU 1-2\Nyx\NyxDataSet', self.height, self.weight)
         for epoch in range(epochs):
             start = 0
             training = True

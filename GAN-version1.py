@@ -6,12 +6,16 @@ from tensorflow.keras.utils import plot_model
 from IPython.display import Image
 from loadRawData import loadData
 from functools import partial
-
+import os
 class GAN():
-    def __init__(self, height, weight, batchsize, ):
-        self.height = height
+    def __init__(self, length, weight, heigth, batchsize):
+        self.length = length
         self.weight = weight
+        self.heigth = heigth
         self.batchsize = batchsize
+        self.n_dis = 5
+        
+        
         self.dis = self.discriminator()
         self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.0001, 
                                                           clipvalue = 1.0, 
@@ -121,38 +125,31 @@ class GAN():
         D_grad = t.gradient(dLoss, self.dis.trainable_variables)
         self.disrOptimizer.apply_gradients(zip(dLoss, self.dis.trainable_variables))
         return real_loss + fake_loss, gp_loss
-    def training(self, epochs, batchsize):
-        rawData = loadData(r'C:\Users\User\Desktop\NTNU 1-2\Nyx\NyxDataSet', self.height, self.weight)
-        for epoch in range(epochs):
-            start = 0
-            training = True
-            while training:
-                noise1 = np.random.normal(size = (batchsize, 1))
-                noise2 = np.random.normal(size = (batchsize, 1))
-                noise3 = np.random.normal(size = (batchsize, 1))
-                batch = rawData[start:start + batchsize]
-                
-                # Feature scalling
-                for i in range(16):         # number of 16 Depends on dimension of raw data we load.
-                    mean = np.mean(batch[:, i, :])
-                    std = np.std(batch[:, i, :])
-                    batch[:, i, :] = (batch[:, i, :] - mean) / std
-                
-                fakeData = self.gen.predict([noise1, noise2, noise3])
-                combineData = np.concatenate([batch, fakeData])
-                combineLabel = np.concatenate([np.ones((batchsize, 1)), np.zeros((batchsize, 1))])
-                dLoss = self.dis.train_on_batch(combineData, combineLabel)
-                gLoss = self.gan.train_on_batch([noise1, noise2, noise3], np.ones((batchsize, 1)))
-
-                print("======================================================================")
-                print(f"Epoch: {epoch}, Batch: {start/batchsize}, Discriminator loss: {dLoss}")    
-                print(f"Epoch: {epoch}, Batch: {start/batchsize}, GAN loss: {gLoss}")
-                print("======================================================================")
-                
-                start += batchsize
-                if start + batchsize >= rawData.shape[0]:
-                    training = False
+    def train_wgan(self):
+        rawData = loadData(r'E:\NTNU 1-2\Nyx\NyxDataSet', self.length, self.weight, self.heigth)
+        log_dirs = 'logs_wgan'
+        model_dir = log_dirs + '\\models\\'
+        os.makedirs(model_dir, exist_ok = True)
+        summary_writer = tf.summary.create_file_writer(log_dirs)
+        sample_random_vector = tf.random.normal((100, 3, 1, 1))
+        for epoch in range(25):
+            for step, real_img in enumerate(rawData):
+                d_loss, gp = self.train_discriminator(real_img)
+                with summary_writer.as_default():
+                    tf.summary.scalar('discriminator_loss', d_loss, self.disrOptimizer.iterations)
+                    tf.summary.scalar('gradient_penalty', gp, self.disrOptimizer.iterations)
+                if self.disrOptimizer.iterations.numpy() % self.n_dis == 0:
+                    g_loss = train_generator()
+                    with summary_writer.as_default():
+                        tf.summary.scalar('generator_loss', g_loss, self.genOptimizer.iterations)
+                        print('G Loss:  {:.2f}\tD loss: {:.2f}\tGP Loss {:.2f}'.format(g_loss, d_loss, gp))
+                        # if  self.genOptimizer.iterations.numpy() % 100 == 0:
+                        #     x_fake = self.gen(sample_random_vector, training = False)
+                            
+        if epoch != 0:
+            self.gen.save_weight(model_dir + f"generator-epoch-{epoch}.h5")
 
 
 
-GAN = GAN(16, 16, 30)
+GAN = GAN(16, 16, 16, 64)
+GAN.train_wgan()
