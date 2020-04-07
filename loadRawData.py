@@ -14,8 +14,8 @@ def loadData(directory, width, length, height):
             
             trainingData[flag] = load_data[120:136, 120:136, 120:136]
             flag += 1
-            if flag == 30:
-                break
+            # if flag == 30:
+            #     break
     print('')
     print('Done!')
     
