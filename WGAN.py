@@ -4,14 +4,15 @@ import numpy as np
 from tensorflow.keras import layers
 from tensorflow.keras.utils import plot_model
 from IPython.display import Image
-from loadRawData import loadData
 from functools import partial
+#from loadRawData import loadData
 import os
+
 class GAN():
-    def __init__(self, length, weight, heigth, batchsize):
+    def __init__(self, length, weight, height, batchsize):
         self.length = length
         self.weight = weight
-        self.heigth = heigth
+        self.height = height
         self.batchsize = batchsize
         self.n_dis = 5
         
@@ -41,79 +42,74 @@ class GAN():
         parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
 
-        h1_1 = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
-        b1_1 = layers.BatchNormalization()(h1_1)
-        l1_1 = layers.LeakyReLU()(b1_1)
-        h1_2 = layers.Dense(512, name = 'parameter1_layer_2')(l1_1)
-        b1_2 = layers.BatchNormalization()(h1_2)
-        l1_2 = layers.LeakyReLU()(b1_2)
-        h1_3 = layers.Dense(512, name = 'parameter1_layer_3')(l1_2)
-        b1_3 = layers.BatchNormalization()(h1_3)
-        l1_3 = layers.LeakyReLU()(b1_3)
+        x = layers.Dense(128, name = 'parameter1_layer_1')(parameter1_input)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
         
-        h2_1 = layers.Dense(512, name = 'parameter2_layer_1')(parameter2_input)
-        b2_1 = layers.BatchNormalization()(h2_1)
-        l2_1 = layers.LeakyReLU()(b2_1)
-        h2_2 = layers.Dense(512, name = 'parameter2_layer_2')(l2_1)
-        b2_2 = layers.BatchNormalization()(h2_2)
-        l2_2 = layers.LeakyReLU()(b2_2)
-        h2_3 = layers.Dense(512, name = 'parameter2_layer_3')(l2_2)
-        b2_3 = layers.BatchNormalization()(h2_3)
-        l2_3 = layers.LeakyReLU()(b2_3)
+        x = layers.Dense(256, name = 'parameter1_layer_2')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_3')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
         
-        h3_1 = layers.Dense(512, name = 'parameter3_layer_1')(parameter3_input)
-        b3_1 = layers.BatchNormalization()(h3_1)
-        l3_1 = layers.LeakyReLU()(b3_1)
-        h3_2 = layers.Dense(512, name = 'parameter3_layer_2')(l3_1)
-        b3_2 = layers.BatchNormalization()(h3_2)
-        l3_2 = layers.LeakyReLU()(b3_2)
-        h3_3 = layers.Dense(512, name = 'parameter3_layer_3')(l3_2)
-        b3_3 = layers.BatchNormalization()(h3_3)
-        l3_3 = layers.LeakyReLU()(b3_3)
-
-        concatenate = layers.concatenate(inputs = [l1_3, l2_3, l3_3])
-
-        h4_1 = layers.Dense(512)(concatenate)
-        b4_1 = layers.BatchNormalization()(h4_1)
-        l4_1 = layers.LeakyReLU()(b4_1)
-        h4_2 = layers.Dense(1024)(l4_1)
-        b4_2 = layers.BatchNormalization()(h4_2)
-        l4_2 = layers.LeakyReLU()(b4_2)
-        h4_3 = layers.Dense(2048)(l4_2)
-        b4_3 = layers.BatchNormalization()(h4_3)
-        l4_3 = layers.LeakyReLU()(b4_3)
-        h4_4 = layers.Dense(4096)(l4_3)
-        b4_4 = layers.BatchNormalization()(h4_4)
-        t4_4 = layers.Activation(tf.nn.tanh)(b4_4)
+        y = layers.Dense(128, name = 'parameter2_layer_1')(parameter2_input)
+        y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
+        y = layers.Dense(256, name = 'parameter2_layer_2')(y)
+        y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_3')(y)
+        y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
         
-        h4_5 = layers.Reshape((16, 16, 16))(t4_4)
+        z = layers.Dense(128, name = 'parameter3_layer_1')(parameter3_input)
+        z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
+        z = layers.Dense(256, name = 'parameter3_layer_2')(z)
+        z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_3')(z)
+        z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-
-        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input], outputs = h4_5)
+        concatenate = layers.concatenate(inputs = [x, y, z])
+        g = layers.Dense(256)(concatenate)
+        g = layers.Reshape((4, 4, 16))(g)
+        
+        g = layers.Conv2DTranspose(32, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        g = layers.BatchNormalization()(g)
+        g = layers.LeakyReLU()(g)
+        
+        g = layers.Conv2DTranspose(1, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        g = layers.BatchNormalization()(g)
+        
+        g = layers.Activation(tf.nn.tanh)(g)
+        
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input], outputs = g)
         plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
         return model
     
     def discriminator(self):
 
-        dataInput = keras.Input(shape = (16,16,16), name = 'groundTruth/fake')
-        flatten = layers.Flatten()(dataInput)
-        d1_0 = layers.Dense(1024)(flatten)
-        b1_0 = layers.BatchNormalization()(d1_0)
-        l1_0 = layers.LeakyReLU()(b1_0)
-        d1_1 = layers.Dense(128)(l1_0)
-        b1_1 = layers.BatchNormalization()(d1_1)
-        l1_1 = layers.LeakyReLU()(b1_1)
-        d1_2 = layers.Dense( 64)(l1_1)
-        b1_2 = layers.BatchNormalization()(d1_2)
-        l1_2 = layers.LeakyReLU()(b1_2)
-        d1_3 = layers.Dense( 8)(l1_2)
-        b1_3 = layers.BatchNormalization()(d1_3)
-        l1_3 = layers.LeakyReLU()(b1_3)
-        d1_4 = layers.Dense( 1)(l1_3)
-        b1_4 = layers.BatchNormalization()(d1_4)
-        l1_4 = layers.LeakyReLU()(b1_4)
+        dataInput = keras.Input(shape = (16,16, 1), name = 'groundTruth/fake')
         
-        model = keras.Model(inputs = dataInput, outputs = l1_4)
+        d = layers.Conv2D(16, kernel_size=3, strides=2, padding='same', use_bias=False)(dataInput)
+        d = layers.BatchNormalization()(d)
+        d = layers.LeakyReLU()(d)
+        
+        d = layers.Conv2D(32, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+        d = layers.BatchNormalization()(d)
+        d = layers.LeakyReLU()(d)
+        
+        d = layers.Conv2D(64, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+        d = layers.BatchNormalization()(d)
+        d = layers.LeakyReLU()(d)
+
+        d = layers.Conv2D(1, kernel_size=2, strides=1, padding='valid')(d)
+        
+        
+        model = keras.Model(inputs = dataInput, outputs = d)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
 
@@ -145,11 +141,11 @@ class GAN():
     @tf.function
     def train_generator(self):
         with tf.GradientTape() as tape:
-            random_vector1 = tf.random.normal(shape = (self.batchsize, 1))
-            random_vector2 = tf.random.normal(shape = (self.batchsize, 1))
-            random_vector3 = tf.random.normal(shape = (self.batchsize, 1))
+            random_vector1 = tf.random.uniform(shape = (self.batchsize, 1), minval=0, maxval=1)
+            random_vector2 = tf.random.uniform(shape = (self.batchsize, 1), minval=0, maxval=1)
+            random_vector3 = tf.random.uniform(shape = (self.batchsize, 1), minval=0, maxval=1)
             fake_img = self.gen([random_vector1, random_vector2, random_vector3],training = True)
-            fake_logit = self.dis(fake_img, training = True)
+            fake_logit = self.dis(fake_img, training = False)
             gLoss = self.generator_loss(fake_logit)
         gradients = tape.gradient(gLoss, self.gen.trainable_variables)
         self.genOptimizer.apply_gradients(zip(gradients, self.gen.trainable_variables))
@@ -158,9 +154,9 @@ class GAN():
     @tf.function
     def train_discriminator(self, real_img):
         with tf.GradientTape() as t:
-            random_vector1 = tf.random.normal(shape = (self.batchsize, 1))
-            random_vector2 = tf.random.normal(shape = (self.batchsize, 1))
-            random_vector3 = tf.random.normal(shape = (self.batchsize, 1))
+            random_vector1 = tf.random.uniform(shape = (self.batchsize, 1), minval=0, maxval=1)
+            random_vector2 = tf.random.uniform(shape = (self.batchsize, 1), minval=0, maxval=1)
+            random_vector3 = tf.random.uniform(shape = (self.batchsize, 1), minval=0, maxval=1)
             fake_img = self.gen([random_vector1, random_vector2, random_vector3],training = True)
             real_logit = self.dis(real_img, training = True)
             fake_logit = self.dis(fake_img, training = True)
@@ -172,17 +168,39 @@ class GAN():
         return real_loss + fake_loss, gp_loss
 
     def train_wgan(self):
-        rawData = loadData(r'E:\NTNU 1-2\Nyx\NyxDataSet', self.length, self.weight, self.heigth)
-        train_data = tf.data.Dataset.from_tensor_slices(rawData)
+        #rawData = loadData(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet', self.length, self.weight, self.height)
+        #train_data = tf.data.Dataset.from_tensor_slices(rawData)
+
+        filename = os.listdir(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet16_16')
+        filename_list = [os.path.join(r"C:\Users\Andy\Desktop\Nyx\NyxDataSet16_16", file) for file in filename]
+        file_queue = tf.data.Dataset.from_tensor_slices(filename_list)
+        train_data = tf.data.FixedLengthRecordDataset(file_queue, 1024)
+        def process_input_data(ds):
+            ds = tf.io.decode_raw(ds, tf.float32)
+            ds = tf.reshape(ds, [16, 16, 1])
+            #ds = tf.slice(ds, [120, 120, 128], [self.length, self.weight, self.height])
+            
+            mean = tf.reduce_mean(ds)
+            std = tf.math.reduce_std(ds)          
+            return (ds-mean)/std
+            
+            # _max = tf.reduce_max(ds)
+            # _min = tf.reduce_min(ds)
+            # return (ds-_min)/(_max-_min)
+        AUTOTUNE = tf.data.experimental.AUTOTUNE
+        train_data = train_data.map(process_input_data, num_parallel_calls=AUTOTUNE)
+        print(train_data)
         train_data = train_data.shuffle(10)
-        train_data = train_data.map(lambda x: tf.cast(x, tf.float32))
         train_data = train_data.batch(self.batchsize, drop_remainder = True)
+        train_data = train_data.prefetch(buffer_size = AUTOTUNE)
+
         #train_data = train_data.prefetch(buffer_size = AUTOTUNE) 
         log_dirs = 'logs_wgan'
         model_dir = log_dirs + '\\models\\'
         os.makedirs(model_dir, exist_ok = True)
         summary_writer = tf.summary.create_file_writer(log_dirs)
-        sample_random_vector = tf.random.normal((100, 3, 1, 1))
+        #sample_random_vector = tf.random.normal((100, 3, 1, 1))
+        print('Start training...')
         for epoch in range(5000):
             for step, real_img in enumerate(train_data):
                 d_loss, gp = self.train_discriminator(real_img)
@@ -193,14 +211,17 @@ class GAN():
                     g_loss = self.train_generator()
                     with summary_writer.as_default():
                         tf.summary.scalar('generator_loss', g_loss, self.genOptimizer.iterations)
-                        print('G Loss:  {:.2f}\tD loss: {:.2f}\tGP Loss {:.2f}'.format(g_loss, d_loss, gp))
+            print(f'Step: {epoch} G Loss:  {g_loss}\tD loss: {d_loss}\tGP Loss {gp}')
                         # if  self.genOptimizer.iterations.numpy() % 100 == 0:
-                        #     x_fake = self.gen(sample_random_vector, training = False)
+                        #     x = self.gen(sample_random_vector, training = False)
                             
         if epoch != 0:
-            self.gen.save(model_dir + f"wgan-epoch-{epoch}.h5")
+            self.gen.save(model_dir + f"wgan-epoch-{epoch}-0413.h5")
 
 
 
-GAN = GAN(16, 16, 16, 64)
+GAN = GAN(16, 16, 1, 64)
 GAN.train_wgan()
+
+
+
