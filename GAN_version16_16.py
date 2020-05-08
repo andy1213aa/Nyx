@@ -9,6 +9,7 @@ import datetime
 from tensorflow.keras.models import load_model
 #from loadRawData import loadData
 import os
+import matplotlib.pyplot as plt
 
 class GAN():
     def __init__(self, length, width, height, batchSize, epochs, dataSetDir):
@@ -18,7 +19,10 @@ class GAN():
         self.batchSize = batchSize
         self.epochs = epochs
         self.dataSetDir = dataSetDir 
-
+        self.trainMSE = []
+        self.testMSE = []
+        self.recordepoch = 100
+        
         self.now = datetime.datetime.now()
         self.nowDate = f'{self.now.year}-{self.now.month}-{self.now.day}_{self.now.hour}-{self.now.minute}'
         self.trainSize = 699
@@ -72,14 +76,22 @@ class GAN():
 
         concatenate = layers.concatenate(inputs = [x, y, z])
         
-        g = layers.Dense(4*4*16*self.filterNumber)(concatenate)
-        g = layers.Reshape((4, 4, 16*self.filterNumber))(g)
+        g = layers.Dense(4*4*2*self.filterNumber)(concatenate)
+        g = layers.Reshape((4, 4, 2*self.filterNumber))(g)
         
-        # g = layers.Conv2DTranspose(4*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        # g = layers.Conv2DTranspose(16*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        # g = layers.BatchNormalization()(g)
+        # g = layers.LeakyReLU()(g)
+
+        # g = layers.Conv2DTranspose(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        # g = layers.BatchNormalization()(g)
+        # g = layers.LeakyReLU()(g)
+
+        # g = layers.Conv2DTranspose(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
         # g = layers.BatchNormalization()(g)
         # g = layers.LeakyReLU()(g)
         
-        # g = layers.Conv2DTranspose(3*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        # g = layers.Conv2DTranspose(4*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
         # g = layers.BatchNormalization()(g)
         # g = layers.LeakyReLU()(g)
 
@@ -87,7 +99,7 @@ class GAN():
         g = layers.BatchNormalization()(g)  
         g = layers.LeakyReLU()(g)
         
-        g = layers.Conv2DTranspose(1*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+        g = layers.Conv2DTranspose(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
         g = layers.BatchNormalization()(g)
         g = layers.LeakyReLU()(g)
 
@@ -143,13 +155,19 @@ class GAN():
         d = layers.Conv2D(2*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
         d = layers.LeakyReLU()(d)
         
-        # d = layers.Conv2D(3*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
-        # d = layers.LeakyReLU()(d)
-        
         # d = layers.Conv2D(4*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
         # d = layers.LeakyReLU()(d)
-
         
+        # d = layers.Conv2D(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+        # d = layers.LeakyReLU()(d)
+
+        # d = layers.Conv2D(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+        # d = layers.LeakyReLU()(d)
+        
+        # d = layers.Conv2D(16*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+        # d = layers.LeakyReLU()(d)
+
+
         d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4,  1] , strides=[1,1, 1, 1], padding='VALID')*(self.height*self.width)
         d = layers.Flatten()(d)
 
@@ -165,9 +183,14 @@ class GAN():
 
 
     def generator_loss(self, fake_logit, real_data, fake_data_by_real_parameter):
-        l1_norm = tf.reduce_mean(tf.norm(tensor = ((fake_data_by_real_parameter-real_data[1])**2), ord='euclidean'))
+        # l1Loss = 0
+        # for i in range(self.batchSize):
+        #     l1Loss += tf.norm((fake_data_by_real_parameter[i] - real_data[1][i]), ord=2)**2
+        # l1Loss/=self.batchSize
+        l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1]), ord='euclidean')
+        #l1_norm = tf.reduce_mean(tf.norm(tensor = ((fake_data_by_real_parameter-real_data[1])**2), ord='euclidean'))
         g_loss = - tf.reduce_mean(fake_logit)
-        return g_loss, l1_norm
+        return g_loss, l2_norm
     def discriminator_loss(self, real_logit, fake_logit):
         real_loss = -tf.reduce_mean(real_logit)
         fake_loss = tf.reduce_mean(fake_logit)
@@ -257,6 +280,7 @@ class GAN():
         test_data = data.skip(self.trainSize)
         #train_data = train_data.shuffle(10)
         train_data = train_data.batch(self.batchSize, drop_remainder = True)
+        test_data = test_data.batch(100, drop_remainder = True)
         train_data = train_data.prefetch(buffer_size = AUTOTUNE)
 
         wgan_dirs = 'wgan_result\\'
@@ -268,6 +292,9 @@ class GAN():
         summary_writer = tf.summary.create_file_writer(wgan_dirs + date_dirs)
 
         print('Start training...')
+        fig = plt.figure()
+        ax_trainMSE = fig.add_subplot(1, 2 , 1)
+        ax_testMSE = fig.add_subplot(1, 2 , 2)
         for epoch in range(1, self.epochs+1):
             for step, real_data in enumerate(train_data):
 
@@ -281,18 +308,35 @@ class GAN():
             print(f'Step: {epoch} G Loss:  {g_loss}\tD loss: {d_loss}\tGP Loss {gp}')
                         # if  self.genOptimizer.iterations.numpy() % 100 == 0:
                         #     x = self.gen(sample_random_vector, training = False)
-                            
+                     
             if epoch % 100 == 0:
-                predictResult = self.gen.predict([self.testinputs1, self.testinputs2, self.testinputs3])
-                predictResult.tofile(result_dir + f'Nyx-{self.width}-{self.length}-{epoch}' )
+
+                predictTrainResult = self.gen.predict([real_data[0][0], real_data[0][1], real_data[0][2]])
+                self.trainMSE.append(tf.reduce_mean(tf.keras.losses.MSE(real_data[1], predictTrainResult)))
+                for step, real_test_data in enumerate(test_data):
+                    predictTestResult = self.gen.predict([real_test_data[0][0], real_test_data[0][1], real_test_data[0][2]])
+                    self.testMSE.append(tf.reduce_mean(tf.keras.losses.MSE(real_test_data[1], predictTestResult)))
+                    predictTestResult[-1].tofile(result_dir + f'NyxTest-{self.width}-{self.length}-{epoch}-{real_test_data[0][0][0]}-{real_test_data[0][1][0]}-{real_test_data[0][2][0]}' )
+                tmp = self.gen.predict([self.testinputs1, self.testinputs2, self.testinputs3])
+                tmp .tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{self.testa}-{self.testb}-{self.testc}')
+        #predictTrainResult[0].tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{real_data[0][0][0]}-{real_data[0][1][0]}-{real_data[0][2][0]}' )
         modelName = f'\\wgan-epoch-{self.epochs}-batch-{self.batchSize}_{self.nowDate}.h5'
         self.gen.save(wgan_dirs + date_dirs + modelName)
         
+        ax_trainMSE.plot(range(self.recordepoch, self.epochs+self.recordepoch, self.recordepoch), self.trainMSE)
+        ax_testMSE.plot(range(self.recordepoch, self.epochs+self.recordepoch, self.recordepoch), self.testMSE)
+        ax_trainMSE.set_xlabel('Epoch')
+        ax_trainMSE.set_ylabel('MSE(Mean Square Error)')
+        ax_testMSE.set_xlabel('Epoch')
+        ax_testMSE.set_ylabel('MSE(Mean Square Error)')
+        plt.title(f'Nyx data {self.length}x{self.width}x{self.height}')
+        plt.show()
+        
 
         
         
 
-GAN = GAN(length = 64, width = 64, height = 1, batchSize = 64, epochs = 3000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet64_64')
+GAN = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 1500, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet16_16')
 GAN.train_wgan()
 
 
