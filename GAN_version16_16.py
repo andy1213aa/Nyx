@@ -10,31 +10,25 @@ from tensorflow.keras.models import load_model
 #from loadRawData import loadData
 import os
 import matplotlib.pyplot as plt
-
+from tensorboard.plugins.hparams import api as hp
+from math import log
 class GAN():
-    def __init__(self, length, width, height, batchSize, epochs, dataSetDir):
+    def __init__(self, length, width, height, batchSize, epochs, dataSetDir,hparams, logdir):
         self.length = length
         self.width = width
         self.height = height
         self.batchSize = batchSize
         self.epochs = epochs
         self.dataSetDir = dataSetDir 
-        self.trainMSE = []
-        self.testMSE = []
+        self.hparams = hparams
         self.recordepoch = 100
-        
-        self.now = datetime.datetime.now()
-        self.nowDate = f'{self.now.year}-{self.now.month}-{self.now.day}_{self.now.hour}-{self.now.minute}'
+        self.logdir = logdir
+
         self.trainSize = 699
         self.filterNumber = 16
         self.L1_coefficient = 1/(length*width*height)
 
-        self.testa = 0.14903
-        self.testb = 0.02182
-        self.testc = 0.83355
-        self.testinputs1 = tf.constant([self.testa])
-        self.testinputs2 = tf.constant([self.testb])
-        self.testinputs3 = tf.constant([self.testc])
+  
         
         
         self.dis = self.discriminator()
@@ -53,25 +47,34 @@ class GAN():
         parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
 
-        x = layers.Dense(128, name = 'parameter1_layer_1')(parameter1_input)
+        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_1')(parameter1_input)
+        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
-        x = layers.Dense(256, name = 'parameter1_layer_2')(x)
+        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_2')(x)
+        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
-        x = layers.Dense(512, name = 'parameter1_layer_3')(x)
+        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_3')(x)
+        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        y = layers.Dense(128, name = 'parameter2_layer_1')(parameter2_input)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
-        y = layers.Dense(256, name = 'parameter2_layer_2')(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
-        y = layers.Dense(512, name = 'parameter2_layer_3')(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
         
-        z = layers.Dense(128, name = 'parameter3_layer_1')(parameter3_input)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
-        z = layers.Dense(256, name = 'parameter3_layer_2')(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
-        z = layers.Dense(512, name = 'parameter3_layer_3')(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
         concatenate = layers.concatenate(inputs = [x, y, z])
@@ -79,29 +82,11 @@ class GAN():
         g = layers.Dense(4*4*2*self.filterNumber)(concatenate)
         g = layers.Reshape((4, 4, 2*self.filterNumber))(g)
         
-        # g = layers.Conv2DTranspose(16*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-        # g = layers.BatchNormalization()(g)
-        # g = layers.LeakyReLU()(g)
-
-        # g = layers.Conv2DTranspose(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-        # g = layers.BatchNormalization()(g)
-        # g = layers.LeakyReLU()(g)
-
-        # g = layers.Conv2DTranspose(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-        # g = layers.BatchNormalization()(g)
-        # g = layers.LeakyReLU()(g)
+        for i in range(int(log(self.width/4, 2))-1, -1, -1):
+            g = layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+            g = layers.BatchNormalization()(g)  
+            g = layers.LeakyReLU()(g)
         
-        # g = layers.Conv2DTranspose(4*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-        # g = layers.BatchNormalization()(g)
-        # g = layers.LeakyReLU()(g)
-
-        g = layers.Conv2DTranspose(2*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-        g = layers.BatchNormalization()(g)  
-        g = layers.LeakyReLU()(g)
-        
-        g = layers.Conv2DTranspose(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-        g = layers.BatchNormalization()(g)
-        g = layers.LeakyReLU()(g)
 
         g = layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
         #g = layers.Activation(tf.nn.tanh)(g)
@@ -116,56 +101,53 @@ class GAN():
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
         dataInput = keras.Input(shape = (self.length,self.width, self.height), name = 'groundTruth/fake')
 
-        x = layers.Dense(128, name = 'parameter1_layer_1')(parameter1_input)
+        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_1')(parameter1_input)
+        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        x = layers.Dense(256, name = 'parameter1_layer_2')(x)
+        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_2')(x)
+        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
 
-        x = layers.Dense(512, name = 'parameter1_layer_3')(x)
+        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_3')(x)
+        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        y = layers.Dense(128, name = 'parameter2_layer_1')(parameter2_input)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
 
-        y = layers.Dense(256, name = 'parameter2_layer_2')(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
 
-        y = layers.Dense(512, name = 'parameter2_layer_3')(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
         
-        z = layers.Dense(128, name = 'parameter3_layer_1')(parameter3_input)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
-        z = layers.Dense(256, name = 'parameter3_layer_2')(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
-        z = layers.Dense(512, name = 'parameter3_layer_3')(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
         concatenate = layers.concatenate(inputs = [x, y, z])
-        xyz = layers.Dense(2*self.filterNumber)(concatenate)    #Depends on how many level of conv2D you have
+        xyz = layers.Dense((int(log(self.width/8, 2))+1)*self.filterNumber)(concatenate)    #Depends on how many level of conv2D you have
         xyz = layers.LeakyReLU()(xyz)
         
 
-        
         d = layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(dataInput)
         d = layers.LeakyReLU()(d)
-
-        d = layers.Conv2D(2*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
-        d = layers.LeakyReLU()(d)
+        for i in range(1, int(log(self.width/8, 2))+1):
+            d = layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+            d = layers.LeakyReLU()(d)
         
-        # d = layers.Conv2D(4*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
-        # d = layers.LeakyReLU()(d)
-        
-        # d = layers.Conv2D(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
-        # d = layers.LeakyReLU()(d)
-
-        # d = layers.Conv2D(8*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
-        # d = layers.LeakyReLU()(d)
-        
-        # d = layers.Conv2D(16*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
-        # d = layers.LeakyReLU()(d)
 
 
         d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4,  1] , strides=[1,1, 1, 1], padding='VALID')*(self.height*self.width)
@@ -267,7 +249,7 @@ class GAN():
         def process_input_data(ds):
             ds = tf.io.decode_raw(ds, tf.float32)
             ds = tf.reshape(ds, [self.width, self.length, 1])
-           
+            
             
             mean = tf.reduce_mean(ds)
             std = tf.math.reduce_std(ds)          
@@ -282,62 +264,62 @@ class GAN():
         train_data = train_data.batch(self.batchSize, drop_remainder = True)
         test_data = test_data.batch(100, drop_remainder = True)
         train_data = train_data.prefetch(buffer_size = AUTOTUNE)
-
-        wgan_dirs = 'wgan_result\\'
-
-        date_dirs = f'predice_result_{self.nowDate}'
-        result_dir = wgan_dirs + date_dirs + f'\\{self.testa}-{self.testb}-{self.testc}\\'
-        os.makedirs(result_dir, exist_ok = True)
         
-        summary_writer = tf.summary.create_file_writer(wgan_dirs + date_dirs)
+        summary_writer = tf.summary.create_file_writer(self.logdir)
+        # tf.summary.trace_on(graph=True, profiler=True)
 
-        print('Start training...')
-        fig = plt.figure()
-        ax_trainMSE = fig.add_subplot(1, 2 , 1)
-        ax_testMSE = fig.add_subplot(1, 2 , 2)
         for epoch in range(1, self.epochs+1):
             for step, real_data in enumerate(train_data):
 
                 d_loss, gp = self.train_discriminator(real_data)
                 g_loss = self.train_generator(real_data)
-             
+                MSE = tf.reduce_mean(tf.keras.losses.MSE(self.gen([real_data[0][0], real_data[0][1], real_data[0][2]]), real_data[1]))
                 with summary_writer.as_default():
-                    tf.summary.scalar('discriminator_loss', d_loss, self.disrOptimizer.iterations)
-                    tf.summary.scalar('generator_loss', g_loss, self.genOptimizer.iterations)
-                    tf.summary.scalar('gradient_penalty', gp, self.disrOptimizer.iterations)
+                    hp.hparams(hparams)
+                    tf.summary.scalar('Mean square error', MSE, epoch)
+                    tf.summary.scalar('discriminator_loss', d_loss, epoch)
+                    tf.summary.scalar('generator_loss', g_loss, epoch)
+                    tf.summary.scalar('gradient_penalty', gp, epoch)
             print(f'Step: {epoch} G Loss:  {g_loss}\tD loss: {d_loss}\tGP Loss {gp}')
                         # if  self.genOptimizer.iterations.numpy() % 100 == 0:
                         #     x = self.gen(sample_random_vector, training = False)
                      
-            if epoch % 100 == 0:
+            #if epoch % 100 == 0:
 
-                predictTrainResult = self.gen.predict([real_data[0][0], real_data[0][1], real_data[0][2]])
-                self.trainMSE.append(tf.reduce_mean(tf.keras.losses.MSE(real_data[1], predictTrainResult)))
-                for step, real_test_data in enumerate(test_data):
-                    predictTestResult = self.gen.predict([real_test_data[0][0], real_test_data[0][1], real_test_data[0][2]])
-                    self.testMSE.append(tf.reduce_mean(tf.keras.losses.MSE(real_test_data[1], predictTestResult)))
-                    predictTestResult[-1].tofile(result_dir + f'NyxTest-{self.width}-{self.length}-{epoch}-{real_test_data[0][0][0]}-{real_test_data[0][1][0]}-{real_test_data[0][2][0]}' )
-                tmp = self.gen.predict([self.testinputs1, self.testinputs2, self.testinputs3])
-                tmp .tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{self.testa}-{self.testb}-{self.testc}')
         #predictTrainResult[0].tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{real_data[0][0][0]}-{real_data[0][1][0]}-{real_data[0][2][0]}' )
-        modelName = f'\\wgan-epoch-{self.epochs}-batch-{self.batchSize}_{self.nowDate}.h5'
-        self.gen.save(wgan_dirs + date_dirs + modelName)
+        # with summary_writer.as_default():
+        #      tf.summary.trace_export(name="my_func_trace", step=0, profiler_outdir=self.logdir)
         
-        ax_trainMSE.plot(range(self.recordepoch, self.epochs+self.recordepoch, self.recordepoch), self.trainMSE)
-        ax_testMSE.plot(range(self.recordepoch, self.epochs+self.recordepoch, self.recordepoch), self.testMSE)
-        ax_trainMSE.set_xlabel('Epoch')
-        ax_trainMSE.set_ylabel('MSE(Mean Square Error)')
-        ax_testMSE.set_xlabel('Epoch')
-        ax_testMSE.set_ylabel('MSE(Mean Square Error)')
-        plt.title(f'Nyx data {self.length}x{self.width}x{self.height}')
-        plt.show()
+        self.gen.save(self.logdir)
         
+      
+HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([128, 512]))
+HP_BN_UNITS = hp.HParam('BatchNormalization', hp.Discrete([False, True]))
+#HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
 
-        
-        
 
-GAN = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 1500, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet16_16')
-GAN.train_wgan()
+now = datetime.datetime.now()
+nowDate = f'{now.year}-{now.month}-{now.day}'+'_'+f'{now.hour}-{now.minute}'
+dirs = 'wgan\\' + nowDate + '\\'
+with tf.summary.create_file_writer(dirs).as_default():
+  hp.hparams_config(
+    hparams=[HP_NUM_UNITS, HP_BN_UNITS],
+    metrics=[hp.Metric('discriminator_loss', display_name='discriminator_loss'), hp.Metric('generator_loss', display_name='generator_loss'), hp.Metric('Mean square error', display_name='Mean square error')]
+  )        
+num = 0
+
+
+for num_units in HP_NUM_UNITS.domain.values:
+    for bn_unit in HP_BN_UNITS.domain.values:
+        session_num = f'run-{num}'
+        hparams = {
+            HP_NUM_UNITS: num_units,
+            HP_BN_UNITS: bn_unit
+        }
+        GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
+        GANs.train_wgan()
+        num+=1
+
 
 
 
