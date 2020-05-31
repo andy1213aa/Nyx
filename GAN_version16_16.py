@@ -47,9 +47,9 @@ class GAN():
 
 
     def generator(self):
-        parameter1_input = keras.Input(shape = (3, 1), name = 'parameter1')
-        # parameter2_input = keras.Input(shape = (1), name = 'parameter2')
-        # parameter3_input = keras.Input(shape = (1), name = 'parameter3')
+        parameter1_input = keras.Input(shape = (1), name = 'parameter1')
+        parameter2_input = keras.Input(shape = (1), name = 'parameter2')
+        parameter3_input = keras.Input(shape = (1), name = 'parameter3')
 
         x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_1')(parameter1_input)
         if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
@@ -61,27 +61,27 @@ class GAN():
         if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        # y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
-        # if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
-        # y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
-        # if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
-        # y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
-        # if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
         
-        # z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
-        # if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
-        # z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
-        # if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
-        # z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
-        # if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # concatenate = layers.concatenate(inputs = [x, y, z])
+        concatenate = layers.concatenate(inputs = [x, y, z])
         
         g = layers.Dense(4*4*2*self.filterNumber)(x)
         g = layers.Reshape((4, 4, 2*self.filterNumber))(g)
@@ -95,14 +95,14 @@ class GAN():
         g = layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
         #g = layers.Activation(tf.nn.tanh)(g)
         
-        model = keras.Model(inputs = parameter1_input, outputs = g)
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input], outputs = g)
         plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
         return model
     
     def discriminator(self):
-        parameter1_input = keras.Input(shape = (3, 1), name = 'parameter1')
-        # parameter2_input = keras.Input(shape = (1), name = 'parameter2')
-        # parameter3_input = keras.Input(shape = (1), name = 'parameter3')
+        parameter1_input = keras.Input(shape = (1), name = 'parameter1')
+        parameter2_input = keras.Input(shape = (1), name = 'parameter2')
+        parameter3_input = keras.Input(shape = (1), name = 'parameter3')
         dataInput = keras.Input(shape = (self.length,self.width, self.height), name = 'groundTruth/fake')
 
         x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_1')(parameter1_input)
@@ -117,31 +117,31 @@ class GAN():
         if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        # y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
-        # if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
 
-        # y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
-        # if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
 
-        # y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
-        # if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
+        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
         
-        # z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
-        # if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
-        # if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
-        # if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
+        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # concatenate = layers.concatenate(inputs = [x, y, z])
+        concatenate = layers.concatenate(inputs = [x, y, z])
         xyz = layers.Dense((int(log(self.width/8, 2))+1)*self.filterNumber)(x)    #Depends on how many level of conv2D you have
         xyz = layers.LeakyReLU()(xyz)
         
@@ -154,7 +154,7 @@ class GAN():
         
 
 
-        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4,  1] , strides=[1,1, 1, 1], padding='VALID')*(self.height*self.width)
+        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4,  1] , strides=[1, 1, 1, 1], padding='VALID')*(self.height*self.width)
         d = layers.Flatten()(d)
 
         f1 = tf.multiply(d, xyz)
@@ -163,13 +163,16 @@ class GAN():
 
 
 
-        model = keras.Model(inputs = [parameter1_input, dataInput], outputs = r)
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = r)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
 
     def decoder(self):
-        decoderInput = keras.Input(shape = (3, 1), name = 'decoderInput')
-        m = layers.Dense(128)(decoderInput)
+        parameter1_input = keras.Input(shape = (1), name = 'decoderInput')
+        parameter2_input = keras.Input(shape = (1), name = 'decoderInput')
+        parameter3_input = keras.Input(shape = (1), name = 'decoderInput')
+        concatenate = layers.concatenate(inputs = [parameter1_input, parameter2_input, parameter3_input])
+        m = layers.Dense(128)(concatenate)
         m = layers.Dense(128)(m)
         m = layers.Dense(256)(m)
         m = layers.Dense(256)(m)
@@ -178,7 +181,7 @@ class GAN():
         m = layers.Dense(128)(m)
         m = layers.Dense(2)(m)
         
-        model = keras.Model(inputs = decoderInput, outputs = m)
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input], outputs = m)
         return model
 
     def generator_loss(self, fake_logit, real_data, fake_data_by_real_parameter):
@@ -259,14 +262,15 @@ class GAN():
         #train_data = tf.data.Dataset.from_tensor_slices(rawData)
         
         filename = os.listdir(self.dataSetDir)
-        parameter = []
-        for file in filename:
-            parameter.append([file[5:12], file[13:20], file[21:28]])
-        parameter = tf.data.Dataset.from_tensor_slices(np.array(parameter, dtype=np.float32).reshape((len(filename), 3)))
+        # parameter = []
+        # for file in filename:
+        #     parameter.append([file[5:12], file[13:20], file[21:28]])
+        # parameter = tf.data.Dataset.from_tensor_slices(np.array(parameter, dtype=np.float32).reshape((len(filename), 3)))
                                                        
-        # parameter2 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[13:20]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-        # parameter3 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[21:28]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-       # parameter123 = tf.data.Dataset.zip((parameter1, parameter2, parameter3))
+        parameter1 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[5:12]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
+        parameter2 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[13:20]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
+        parameter3 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[21:28]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
+        parameter123 = tf.data.Dataset.zip((parameter1, parameter2, parameter3))
 
         filename_list = [os.path.join(self.dataSetDir, file) for file in filename]
 
