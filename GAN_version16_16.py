@@ -41,7 +41,7 @@ class GAN():
                                                     clipvalue = 1.0, 
                                                     decay = 1e-8)
         self.decod = self.decoder()
-        self.decoderOptimizer = keras.optimizers.Adam(lr = 0.00005, beta_1 = 0.5, beta_2 = 0.9)
+        self.decoderOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
         # self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, beta_1 = 0.5, beta_2 = 0.9)                                            
         self.gradient_penality_width = 10.0
 
@@ -168,9 +168,9 @@ class GAN():
         return model
 
     def decoder(self):
-        parameter1_input = keras.Input(shape = (1), name = 'decoderInput')
-        parameter2_input = keras.Input(shape = (1), name = 'decoderInput')
-        parameter3_input = keras.Input(shape = (1), name = 'decoderInput')
+        parameter1_input = keras.Input(shape = (1), name = 'decoderInput1')
+        parameter2_input = keras.Input(shape = (1), name = 'decoderInput2')
+        parameter3_input = keras.Input(shape = (1), name = 'decoderInput3')
         concatenate = layers.concatenate(inputs = [parameter1_input, parameter2_input, parameter3_input])
         m = layers.Dense(128)(concatenate)
         m = layers.Dense(128)(m)
@@ -183,7 +183,9 @@ class GAN():
         
         model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input], outputs = m)
         return model
-
+    def decoder_loss(self, real,  predict):
+        de_loss = tf.reduce_sum((real-predict)**2)
+        return de_loss
     def generator_loss(self, fake_logit, real_data, fake_data_by_real_parameter):
         # l1Loss = 0
         # for i in range(self.batchSize):
@@ -253,10 +255,16 @@ class GAN():
         D_grad = t.gradient(dLoss, self.dis.trainable_variables)
         self.disrOptimizer.apply_gradients(zip(D_grad, self.dis.trainable_variables))
         return real_loss + fake_loss, gp_loss
+    
     @tf.function
     def train_decoder(self, real_data):
         with tf.GradientTape() as t:
-            predictM_S = self.decod()
+            predictM_S = self.decod([real_data[0][0], real_data[0][1], real_data[0][2]])
+            de_loss = self.decoder_loss(real_data[1][2], predictM_S)
+        de_grad = t.gradient(de_loss, self.decod.trainable_variables)
+        self.decoderOptimizer.apply_gradients(zip(de_grad, self.decod.trainable_variables))
+        return de_loss
+    
     def train_wgan(self):
         #rawData = loadData(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet', self.length, self.width, self.height)
         #train_data = tf.data.Dataset.from_tensor_slices(rawData)
@@ -281,12 +289,13 @@ class GAN():
             ds = tf.reshape(ds, [self.width, self.length, 1])
             
             mean = tf.reduce_mean(ds)
-            std = tf.math.reduce_std(ds)          
-            return (ds-mean)/std, ds, mean, std
+            std = tf.math.reduce_std(ds) 
+            M_S = tf.stack([tf.math.log(mean), tf.math.log(std)])         
+            return (ds-mean)/std, ds, M_S
             
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
-        data = tf.data.Dataset.zip((parameter, data))
+        data = tf.data.Dataset.zip((parameter123, data))
         #data = data.shuffle(800)
         train_data = data.take(self.trainSize)
         test_data = data.skip(self.trainSize)
@@ -300,20 +309,23 @@ class GAN():
 
         for epoch in range(1, self.epochs+1):
             for step, real_data in enumerate(train_data):
-                print(real_data[0])
-                break
+                
+                
                 # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2]
                 # real_data 中 real_data[1] 分別是 real_data[1][0]: 壓縮後， real_data[1][1]:壓縮前， real_data[1][2]: 平均數， real_data[1][3]: 標準差 
-                d_loss, gp = self.train_discriminator(real_data)
-                g_loss = self.train_generator(real_data)
-                MSE = tf.reduce_mean(tf.keras.losses.MSE(self.gen([real_data[0]]), real_data[1][0]))
+                # d_loss, gp = self.train_discriminator(real_data)
+                # g_loss = self.train_generator(real_data)
+                # MSE = tf.reduce_mean(tf.keras.losses.MSE(self.gen([real_data[0]]), real_data[1][0]))
+                de_loss = self.train_decoder(real_data)
                 with summary_writer.as_default():
-                    hp.hparams(hparams)
-                    tf.summary.scalar('Mean square error', MSE, epoch)
-                    tf.summary.scalar('discriminator_loss', d_loss, epoch)
-                    tf.summary.scalar('generator_loss', g_loss, epoch)
-                    tf.summary.scalar('gradient_penalty', gp, epoch)
-            print(f'Epoch: {epoch} G Loss:  {g_loss}\tD loss: {d_loss}\tGP Loss {gp}')
+                    # hp.hparams(hparams)
+                    # tf.summary.scalar('Mean square error', MSE, epoch)
+                    # tf.summary.scalar('discriminator_loss', d_loss, epoch)
+                    # tf.summary.scalar('generator_loss', g_loss, epoch)
+                    # tf.summary.scalar('gradient_penalty', gp, epoch)
+                    tf.summary.scalar('deloss', de_loss, epoch)
+            #print(f'Epoch: {epoch} G Loss:  {g_loss}\tD loss: {d_loss}\tGP Loss {gp}')
+            print(f'Epoch: {epoch} deLose: {de_loss}')
                         # if  self.genOptimizer.iterations.numpy() % 100 == 0:
                         #     x = self.gen(sample_random_vector, training = False)
                      
@@ -323,7 +335,7 @@ class GAN():
         # with summary_writer.as_default():
         #      tf.summary.trace_export(name="my_func_trace", step=0, profiler_outdir=self.logdir)
         
-        self.gen.save(self.logdir)
+        self.decod.save(self.logdir)
         
       
 HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([512]))
@@ -349,7 +361,7 @@ for num_units in HP_NUM_UNITS.domain.values:
             HP_NUM_UNITS: num_units,
             HP_BN_UNITS: bn_unit
         }
-        GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 500, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
+        GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 3000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
         GANs.train_wgan()
         num+=1
 
