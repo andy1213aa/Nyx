@@ -7,6 +7,7 @@ from IPython.display import Image
 from functools import partial
 import datetime
 from tensorflow.keras.models import load_model
+from SaveModel import SaveModel
 #from loadRawData import loadData
 import os
 import matplotlib.pyplot as plt
@@ -100,20 +101,20 @@ class GAN():
 
         self.trainSize = 699
         self.filterNumber = 16
-        self.L2_coefficient =0.05# 1/(length*width*height)
+        self.L2_coefficient =100# 1/(length*width*height)
 
   
         
         
         self.dis = self.discriminator()
-        self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.0002, 
+        self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.002, 
                                                           clipvalue = 1.0, 
-                                                          decay = 1e-8)
+                                                          decay = 1e-4)
         # self.disrOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
         self.gen = self.generator()
-        self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, 
-                                                    clipvalue = 1.0, 
-                                                    decay = 1e-8)
+        self.genOptimizer = keras.optimizers.RMSprop(lr = 0.0005, 
+                                                    clipvalue = 10.0, 
+                                                    decay = 1e-4)
         # self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, beta_1 = 0.5, beta_2 = 0.9)                                            
         self.decod = self.decoder()
         self.decoderOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
@@ -157,16 +158,16 @@ class GAN():
 
         concatenate = layers.concatenate(inputs = [x, y, z])
         
-        g = layers.Dense(4*4*2*self.filterNumber)(concatenate)
+        g =layers.Dense(4*4*2*self.filterNumber)(concatenate)
         g = layers.Reshape((4, 4, 2*self.filterNumber))(g)
         
         for i in range(int(log(self.width/4, 2))-1, -1, -1):
-            g = layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+            g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
             
             g = layers.LeakyReLU()(g)
         
 
-        g = layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
+        g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
         
         #g = layers.Activation(tf.nn.tanh)(g)
         
@@ -387,8 +388,9 @@ class GAN():
         
         summary_writer = tf.summary.create_file_writer(self.logdir)
         # tf.summary.trace_on(graph=True, profiler=True)
-
-        for epoch in range(1, self.epochs+1):
+        saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)
+        epoch = 1
+        while saveModel.training:
             for step, real_data in enumerate(train_data):
                 
                 
@@ -409,27 +411,29 @@ class GAN():
                 # MSE = tf.reduce_mean(tf.keras.losses.MSE((predi_data*tf.math.exp(predi_std) + tf.math.exp(predi_mean)), real_data[1][1]))
                 MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data))
                 l2 = tf.norm(tensor = real_data[1][1]-predi_data)
-                with summary_writer.as_default():
-                    hp.hparams(hparams)
-                    tf.summary.scalar('Mean square error', MSE, epoch)
-                    tf.summary.scalar('discriminator_loss', d_loss, epoch)
-                    tf.summary.scalar('generator_loss', g_loss, epoch)
-                    tf.summary.scalar('gradient_penalty', gp, epoch)
-                    #tf.summary.scalar('deloss', de_loss, epoch)
+            with summary_writer.as_default():
+                hp.hparams(hparams)
+                tf.summary.scalar('Mean square error', MSE, epoch)
+                tf.summary.scalar('discriminator_loss', d_loss, epoch)
+                tf.summary.scalar('generator_loss', g_loss, epoch)
+                tf.summary.scalar('gradient_penalty', gp, epoch)
+                tf.summary.scalar('L2 loss', l2, epoch)
+            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.10f} L2: {l2:20}')
+            saveModel.on_epoch_end(l2)
+            if epoch%1000 == 0:
+                saveModel.save_model()
+            epoch += 1
+                            # if  self.genOptimizer.iterations.numpy() % 100 == 0:
+                            #     x = self.gen(sample_random_vector, training = False)
+                # print("Real", real_data[1][1])
+                # print("Predict" ,predi_data)
+                #if epoch % 100 == 0:
                 
-            print(f'Epoch: {epoch} G Loss: {g_loss} D loss: {d_loss} GP Loss {gp} MSE: {MSE}' )
-                        # if  self.genOptimizer.iterations.numpy() % 100 == 0:
-                        #     x = self.gen(sample_random_vector, training = False)
-            # print("Real", real_data[1][1])
-            # print("Predict" ,predi_data)
-            #if epoch % 100 == 0:
-
-        #predictTrainResult[0].tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{real_data[0][0][0]}-{real_data[0][1][0]}-{real_data[0][2][0]}' )
-        # with summary_writer.as_default():
-        #      tf.summary.trace_export(name="my_func_trace", step=0, profiler_outdir=self.logdir)
-        
-        self.gen.save(self.logdir)
-        
+            #predictTrainResult[0].tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{real_data[0][0][0]}-{real_data[0][1][0]}-{real_data[0][2][0]}' )
+            # with summary_writer.as_default():
+            #      tf.summary.trace_export(name="my_func_trace", step=0, profiler_outdir=self.logdir)
+            
+            
       
 HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([512]))
 HP_BN_UNITS = hp.HParam('BatchNormalization', hp.Discrete([False]))
