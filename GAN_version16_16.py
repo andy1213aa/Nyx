@@ -377,7 +377,7 @@ class GAN():
             mean = tf.reduce_mean(ds)
             std = tf.math.reduce_std(ds) 
             #M_S = tf.stack([tf.math.log(mean), tf.math.log(std)])         
-            return ds, (ds-mean)/std #M_S
+            return (ds-mean)/std, ds  #M_S
             
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
