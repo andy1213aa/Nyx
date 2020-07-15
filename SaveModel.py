@@ -37,6 +37,6 @@ class SaveModel(tf.keras.callbacks.Callback):
             self.counter = 0
         else:
             self.counter += 1
-            if self.counter >= 100:
+            if self.counter >= 1000:
                 self.save_model()
                 self.training = False

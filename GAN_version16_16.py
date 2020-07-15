@@ -101,20 +101,20 @@ class GAN():
 
         self.trainSize = 699
         self.filterNumber = 16
-        self.L2_coefficient =100# 1/(length*width*height)
+        self.L2_coefficient =0.5# 1/(length*width*height)
 
   
         
         
         self.dis = self.discriminator()
-        self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.002, 
+        self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.0002, 
                                                           clipvalue = 1.0, 
-                                                          decay = 1e-4)
+                                                          decay = 1e-8)
         # self.disrOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
         self.gen = self.generator()
-        self.genOptimizer = keras.optimizers.RMSprop(lr = 0.0005, 
-                                                    clipvalue = 10.0, 
-                                                    decay = 1e-4)
+        self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, 
+                                                    clipvalue = 1.0, 
+                                                    decay = 1e-8)
         # self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, beta_1 = 0.5, beta_2 = 0.9)                                            
         self.decod = self.decoder()
         self.decoderOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
@@ -162,12 +162,14 @@ class GAN():
         g = layers.Reshape((4, 4, 2*self.filterNumber))(g)
         
         for i in range(int(log(self.width/4, 2))-1, -1, -1):
-            g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
+           # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
+            g = layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
             
             g = layers.LeakyReLU()(g)
         
 
-        g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
+        #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
+        g = layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
         
         #g = layers.Activation(tf.nn.tanh)(g)
         
@@ -222,11 +224,13 @@ class GAN():
         xyz = layers.LeakyReLU()(xyz)
         
 
-        d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
+        #d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
+        d = layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(dataInput)
         
         d = layers.LeakyReLU()(d)
         for i in range(1, int(log(self.width/8, 2))+1):
-            d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
+            d = layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+            #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
             d = layers.LeakyReLU()(d)
         
@@ -242,7 +246,7 @@ class GAN():
         #r = layers.Activation(tf.nn.tanh)(r)
 
 
-        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = d)
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = r)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
     
@@ -288,7 +292,7 @@ class GAN():
             inter = (alpha * a) + ((1-alpha)*b)
             inter.set_shape(a.shape)
             return inter
-        x_img = _interpolate(real_data[1][0], fake_data)
+        x_img = _interpolate(real_data[1][1], fake_data)
         with tf.GradientTape() as tape:
             tape.watch(x_img)
             pred_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], x_img])
@@ -373,7 +377,7 @@ class GAN():
             mean = tf.reduce_mean(ds)
             std = tf.math.reduce_std(ds) 
             #M_S = tf.stack([tf.math.log(mean), tf.math.log(std)])         
-            return (ds-mean)/std, ds #M_S
+            return ds, (ds-mean)/std #M_S
             
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
@@ -397,7 +401,7 @@ class GAN():
                 # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2]
                 # real_data 中 real_data[1] 分別是 real_data[1][0]: 壓縮後， real_data[1][1]:壓縮前， real_data[1][2]: 平均數， real_data[1][3]: 標準差 
                 d_loss, gp = self.train_discriminator(real_data)
-                g_loss = self.train_generator(real_data)
+                g_loss= self.train_generator(real_data)
                 # de_loss = self.train_decoder(real_data)
                 
                 # predi_mean = tf.reshape(self.decod([real_data[0][0], real_data[0][1], real_data[0][2]])[:, 0], [self.batchSize, 1, 1, 1])
@@ -410,16 +414,17 @@ class GAN():
                 
                 # MSE = tf.reduce_mean(tf.keras.losses.MSE((predi_data*tf.math.exp(predi_std) + tf.math.exp(predi_mean)), real_data[1][1]))
                 MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data))
-                l2 = tf.norm(tensor = real_data[1][1]-predi_data)
+                training_l2 = tf.norm(tensor = real_data[1][1]-predi_data)
             with summary_writer.as_default():
                 hp.hparams(hparams)
+                tf.summary.scalar('Training L2', training_l2, epoch)
                 tf.summary.scalar('Mean square error', MSE, epoch)
                 tf.summary.scalar('discriminator_loss', d_loss, epoch)
                 tf.summary.scalar('generator_loss', g_loss, epoch)
                 tf.summary.scalar('gradient_penalty', gp, epoch)
-                tf.summary.scalar('L2 loss', l2, epoch)
-            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.10f} L2: {l2:20}')
-            saveModel.on_epoch_end(l2)
+                
+            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} Training L2: {training_l2:15.2f} Training MSE {MSE:15.2f}')
+            saveModel.on_epoch_end(training_l2)
             if epoch%1000 == 0:
                 saveModel.save_model()
             epoch += 1
