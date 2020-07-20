@@ -225,11 +225,11 @@ class GAN():
         
 
         #d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
-        d = layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(dataInput)
+        d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
         
         d = layers.LeakyReLU()(d)
         for i in range(1, int(log(self.width/8, 2))+1):
-            d = layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(d)
+            d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
             d = layers.LeakyReLU()(d)
@@ -239,14 +239,14 @@ class GAN():
         d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4,  1] , strides=[1, 1, 1, 1], padding='VALID')*(self.height*self.width)
         d = layers.Flatten()(d)
 
-        f1 = tf.multiply(d, xyz)
-        f2 = layers.Dense(1)(d)
-        r = layers.Add()([f1, f2])
+        # f1 = tf.multiply(d, xyz)
+        # f2 = layers.Dense(1)(d)
+        # r = layers.Add()([f1, f2])
         
         #r = layers.Activation(tf.nn.tanh)(r)
 
 
-        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = r)
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = d)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
     
@@ -276,6 +276,7 @@ class GAN():
         #     l1Loss += tf.norm((fake_data_by_real_parameter[i] - real_data[1][i]), ord=2)**2
         # l1Loss/=self.batchSize
         l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1][1]), ord='euclidean')
+        #rmse = tf.sqrt(tf.reduce_mean((real_data[1][1] - fake_data_by_real_parameter)**2)) / (tf.reduce_max(real_data[1][1]) - tf.reduce_min(real_data[1][1]))
         #l2_norm = 0
         #l1_norm = tf.reduce_mean(tf.norm(tensor = ((fake_data_by_real_parameter-real_data[1])**2), ord='euclidean'))
         g_loss = - tf.reduce_mean(fake_logit)
@@ -315,8 +316,8 @@ class GAN():
             fake_data_by_real_parameter = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
 
             fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
-            fake_loss, l2_loss = self.generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
-            gLoss = fake_loss+self.L2_coefficient*l2_loss
+            fake_loss, l2_norm = self.generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
+            gLoss = fake_loss+self.L2_coefficient*l2_norm
         gradients = tape.gradient(gLoss, self.gen.trainable_variables)
         self.genOptimizer.apply_gradients(zip(gradients, self.gen.trainable_variables))
         return gLoss
@@ -377,7 +378,7 @@ class GAN():
             mean = tf.reduce_mean(ds)
             std = tf.math.reduce_std(ds) 
             #M_S = tf.stack([tf.math.log(mean), tf.math.log(std)])         
-            return (ds-mean)/std, ds  #M_S
+            return  (ds-mean)/std, ds  #M_S
             
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
@@ -413,18 +414,21 @@ class GAN():
                 # # print("test:", predi_data*tf.math.exp(predi_std) + tf.math.exp(predi_mean))
                 
                 # MSE = tf.reduce_mean(tf.keras.losses.MSE((predi_data*tf.math.exp(predi_std) + tf.math.exp(predi_mean)), real_data[1][1]))
-                MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data))
-                training_l2 = tf.norm(tensor = real_data[1][1]-predi_data)
+                data_max = tf.reduce_max(real_data[1][1])
+                data_min = tf.reduce_min(real_data[1][1])
+              
+                #MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data)) / (data_max - data_min)  
+                RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1][1] - predi_data)**2)) / (data_max - data_min)) 
             with summary_writer.as_default():
                 hp.hparams(hparams)
-                tf.summary.scalar('Training L2', training_l2, epoch)
-                tf.summary.scalar('Mean square error', MSE, epoch)
+                tf.summary.scalar('RMSE', RMSE, epoch)
+                #tf.summary.scalar('Mean square error', MSE, epoch)
                 tf.summary.scalar('discriminator_loss', d_loss, epoch)
                 tf.summary.scalar('generator_loss', g_loss, epoch)
                 tf.summary.scalar('gradient_penalty', gp, epoch)
                 
-            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} Training L2: {training_l2:15.2f} Training MSE {MSE:15.2f}')
-            saveModel.on_epoch_end(training_l2)
+            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} RMSE: {RMSE* 100 :3.5f}%  ')
+            saveModel.on_epoch_end(RMSE)
             if epoch%1000 == 0:
                 saveModel.save_model()
             epoch += 1
@@ -463,7 +467,7 @@ for num_units in HP_NUM_UNITS.domain.values:
             HP_NUM_UNITS: num_units,
             HP_BN_UNITS: bn_unit
         }
-        GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
+        GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet256_256', hparams = hparams, logdir = dirs+'\\'+session_num)
         GANs.train_wgan()
         num+=1
 
