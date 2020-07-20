@@ -1,92 +1,16 @@
-import tensorflow as tf
+
 import tensorflow.keras as keras
 import numpy as np
 from tensorflow.keras import layers
 from tensorflow.keras.utils import plot_model
 from IPython.display import Image
 from functools import partial
-import datetime
-from tensorflow.keras.models import load_model
-from SaveModel import SaveModel
-#from loadRawData import loadData
-import os
-import matplotlib.pyplot as plt
-from tensorboard.plugins.hparams import api as hp
 from math import log
+from SaveModel import SaveModel
+import tensorflow as tf
+from SpectralNormalization import SpectralNormalization
+import os
 
-from tensorflow.python.eager import def_function
-from tensorflow.python.framework import dtypes
-from tensorflow.python.framework import tensor_shape
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import initializers
-from tensorflow.python.ops import array_ops
-from tensorflow.python.ops import math_ops
-class SpectralNormalization(layers.Wrapper):
-    """
-    Attributes:
-       layer: tensorflow keras layers (with kernel attribute)
-    """
-
-    def __init__(self, layer, **kwargs):
-        super(SpectralNormalization, self).__init__(layer, **kwargs)
-
-    def build(self, input_shape):
-        """Build `Layer`"""
-
-        if not self.layer.built:
-            self.layer.build(input_shape)
-
-            if not hasattr(self.layer, 'kernel'):
-                raise ValueError(
-                    '`SpectralNormalization` must wrap a layer that'
-                    ' contains a `kernel` for weights')
-
-            self.w = self.layer.kernel
-            self.w_shape = self.w.shape.as_list()
-            self.u = self.add_variable(
-                shape=tuple([1, self.w_shape[-1]]),
-                initializer=initializers.TruncatedNormal(stddev=0.02),
-                name='sn_u',
-                trainable=False,
-                dtype=dtypes.float32)
-
-        super(SpectralNormalization, self).build()
-
-    @def_function.function
-    def call(self, inputs, training=None):
-        """Call `Layer`"""
-        if training==None:
-            training = K.learning_phase()
-        
-        if training==True:
-            # Recompute weights for each forward pass
-            self._compute_weights()
-        
-        output = self.layer(inputs)
-        return output
-
-    def _compute_weights(self):
-        """Generate normalized weights.
-        This method will update the value of self.layer.kernel with the
-        normalized value, so that the layer is ready for call().
-        """
-        w_reshaped = array_ops.reshape(self.w, [-1, self.w_shape[-1]])
-        eps = 1e-12
-        _u = array_ops.identity(self.u)
-        _v = math_ops.matmul(_u, array_ops.transpose(w_reshaped))
-        _v = _v / math_ops.maximum(math_ops.reduce_sum(_v**2)**0.5, eps)
-        _u = math_ops.matmul(_v, w_reshaped)
-        _u = _u / math_ops.maximum(math_ops.reduce_sum(_u**2)**0.5, eps)
-
-        self.u.assign(_u)
-        sigma = math_ops.matmul(math_ops.matmul(_v, w_reshaped), array_ops.transpose(_u))
-
-        self.layer.kernel.assign(self.w / sigma)
-
-    def compute_output_shape(self, input_shape):
-        return tensor_shape.TensorShape(
-            self.layer.compute_output_shape(input_shape).as_list())
 class GAN():
     def __init__(self, length, width, height, batchSize, epochs, dataSetDir,hparams, logdir):
         self.length = length
@@ -103,9 +27,6 @@ class GAN():
         self.filterNumber = 16
         self.L2_coefficient =0.5# 1/(length*width*height)
 
-  
-        
-        
         self.dis = self.discriminator()
         self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.0002, 
                                                           clipvalue = 1.0, 
@@ -116,8 +37,6 @@ class GAN():
                                                     clipvalue = 1.0, 
                                                     decay = 1e-8)
         # self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, beta_1 = 0.5, beta_2 = 0.9)                                            
-        self.decod = self.decoder()
-        self.decoderOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
         self.gradient_penality_width = 10.0
 
 
@@ -126,34 +45,34 @@ class GAN():
         parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
 
-        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_1')(parameter1_input)
-        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
-        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_2')(x)
-        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_2')(x)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
-        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_3')(x)
-        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_3')(x)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
-        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_1')(parameter2_input)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
-        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
-        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_2')(y)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
-        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
-        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_3')(y)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
         
-        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
-        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_1')(parameter3_input)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
-        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
-        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_2')(z)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
-        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
-        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_3')(z)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
         concatenate = layers.concatenate(inputs = [x, y, z])
@@ -183,40 +102,40 @@ class GAN():
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
         dataInput = keras.Input(shape = (self.length,self.width, self.height), name = 'groundTruth/fake')
 
-        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_1')(parameter1_input)
-        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_2')(x)
-        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_2')(x)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
 
-        x = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter1_layer_3')(x)
-        if hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_3')(x)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         
-        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_1')(parameter2_input)
-        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_1')(parameter2_input)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
 
-        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_2')(y)
-        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_2')(y)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
 
-        y = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter2_layer_3')(y)
-        if hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_3')(y)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
         
-        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_1')(parameter3_input)
-        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_1')(parameter3_input)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
-        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_2')(z)
-        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_2')(z)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
-        z = layers.Dense(hparams[HP_NUM_UNITS], name = 'parameter3_layer_3')(z)
-        if hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_3')(z)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         z = layers.LeakyReLU()(z)
 
         concatenate = layers.concatenate(inputs = [x, y, z])
@@ -250,26 +169,7 @@ class GAN():
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
     
-    def decoder(self):
-        parameter1_input = keras.Input(shape = (1), name = 'decoderInput1')
-        parameter2_input = keras.Input(shape = (1), name = 'decoderInput2')
-        parameter3_input = keras.Input(shape = (1), name = 'decoderInput3')
-        concatenate = layers.concatenate(inputs = [parameter1_input, parameter2_input, parameter3_input])
-        m = layers.Dense(128)(concatenate)
-        m = layers.Dense(128)(m)
-        m = layers.Dense(256)(m)
-        m = layers.Dense(256)(m)
-        m = layers.Dense(512)(m)
-        m = layers.Dense(256)(m)
-        m = layers.Dense(128)(m)
-        m = layers.Dense(2)(m)
-        
-        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input], outputs = m)
-        return model
-    def decoder_loss(self, real,  predict):
-        de_loss = tf.norm(tensor = (real-predict), ord='euclidean')
-        
-        return tf.clip_by_value(de_loss, clip_value_min=-1, clip_value_max=1)
+    
     def generator_loss(self, fake_logit, real_data, fake_data_by_real_parameter):
         # l1Loss = 0
         # for i in range(self.batchSize):
@@ -353,15 +253,9 @@ class GAN():
         return de_loss
     
     def train_wgan(self):
-        #rawData = loadData(r'C:\Users\Andy\Desktop\Nyx\NyxDataSet', self.length, self.width, self.height)
-        #train_data = tf.data.Dataset.from_tensor_slices(rawData)
-        
+
         filename = os.listdir(self.dataSetDir)
-        # parameter = []
-        # for file in filename:
-        #     parameter.append([file[5:12], file[13:20], file[21:28]])
-        # parameter = tf.data.Dataset.from_tensor_slices(np.array(parameter, dtype=np.float32).reshape((len(filename), 3)))
-                                                       
+                                            
         parameter1 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[5:12]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
         parameter2 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[13:20]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
         parameter3 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[21:28]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
@@ -400,27 +294,19 @@ class GAN():
                 
                 
                 # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2]
-                # real_data 中 real_data[1] 分別是 real_data[1][0]: 壓縮後， real_data[1][1]:壓縮前， real_data[1][2]: 平均數， real_data[1][3]: 標準差 
+                # real_data 中 real_data[1] 分別是 real_data[1][0]: 壓縮前， real_data[1][1]:壓縮後
                 d_loss, gp = self.train_discriminator(real_data)
                 g_loss= self.train_generator(real_data)
-                # de_loss = self.train_decoder(real_data)
-                
-                # predi_mean = tf.reshape(self.decod([real_data[0][0], real_data[0][1], real_data[0][2]])[:, 0], [self.batchSize, 1, 1, 1])
-                # predi_std = tf.reshape(self.decod([real_data[0][0], real_data[0][1], real_data[0][2]])[:, 1], [self.batchSize, 1, 1, 1])
+
                 predi_data = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]])
                 
-                
-                # # print("data:", predi_data)
-                # # print("test:", predi_data*tf.math.exp(predi_std) + tf.math.exp(predi_mean))
-                
-                # MSE = tf.reduce_mean(tf.keras.losses.MSE((predi_data*tf.math.exp(predi_std) + tf.math.exp(predi_mean)), real_data[1][1]))
                 data_max = tf.reduce_max(real_data[1][1])
                 data_min = tf.reduce_min(real_data[1][1])
               
                 #MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data)) / (data_max - data_min)  
                 RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1][1] - predi_data)**2)) / (data_max - data_min)) 
             with summary_writer.as_default():
-                hp.hparams(hparams)
+                #hp.hparams(hparams)
                 tf.summary.scalar('RMSE', RMSE, epoch)
                 #tf.summary.scalar('Mean square error', MSE, epoch)
                 tf.summary.scalar('discriminator_loss', d_loss, epoch)
@@ -432,44 +318,9 @@ class GAN():
             if epoch%1000 == 0:
                 saveModel.save_model()
             epoch += 1
-                            # if  self.genOptimizer.iterations.numpy() % 100 == 0:
-                            #     x = self.gen(sample_random_vector, training = False)
-                # print("Real", real_data[1][1])
-                # print("Predict" ,predi_data)
-                #if epoch % 100 == 0:
-                
-            #predictTrainResult[0].tofile(result_dir + f'NyxTrain-{self.width}-{self.length}-{real_data[0][0][0]}-{real_data[0][1][0]}-{real_data[0][2][0]}' )
-            # with summary_writer.as_default():
-            #      tf.summary.trace_export(name="my_func_trace", step=0, profiler_outdir=self.logdir)
-            
+                            
             
       
-HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([512]))
-HP_BN_UNITS = hp.HParam('BatchNormalization', hp.Discrete([False]))
-#HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
-
-now = datetime.datetime.now()
-nowDate = f'{now.year}-{now.month}-{now.day}'+'_'+f'{now.hour}-{now.minute}'
-dirs = 'wgan\\' + nowDate + '\\'
-
-with tf.summary.create_file_writer(dirs).as_default():
-  hp.hparams_config(
-    hparams=[HP_NUM_UNITS, HP_BN_UNITS],
-    metrics=[hp.Metric('discriminator_loss', display_name='discriminator_loss'), hp.Metric('generator_loss', display_name='generator_loss'), hp.Metric('Mean square error', display_name='Mean square error')]
-  )        
-num = 0
-
-
-for num_units in HP_NUM_UNITS.domain.values:
-    for bn_unit in HP_BN_UNITS.domain.values:
-        session_num = f'run-{num}'
-        hparams = {
-            HP_NUM_UNITS: num_units,
-            HP_BN_UNITS: bn_unit
-        }
-        GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet256_256', hparams = hparams, logdir = dirs+'\\'+session_num)
-        GANs.train_wgan()
-        num+=1
 
 
 
