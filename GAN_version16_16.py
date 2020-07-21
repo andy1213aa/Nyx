@@ -26,12 +26,12 @@ class GAN():
         self.trainSize = 699
         self.filterNumber = 16
         self.L2_coefficient =0.5# 1/(length*width*height)
-
+        self.validationSize = 59
         self.dis = self.discriminator()
-        self.disrOptimizer = keras.optimizers.RMSprop(lr = 0.0002, 
+        self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, 
                                                           clipvalue = 1.0, 
                                                           decay = 1e-8)
-        # self.disrOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
+        # self.disOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
         self.gen = self.generator()
         self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, 
                                                     clipvalue = 1.0, 
@@ -175,7 +175,7 @@ class GAN():
         # for i in range(self.batchSize):
         #     l1Loss += tf.norm((fake_data_by_real_parameter[i] - real_data[1][i]), ord=2)**2
         # l1Loss/=self.batchSize
-        l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1][1]), ord='euclidean')
+        l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1]), ord='euclidean')
         #rmse = tf.sqrt(tf.reduce_mean((real_data[1][1] - fake_data_by_real_parameter)**2)) / (tf.reduce_max(real_data[1][1]) - tf.reduce_min(real_data[1][1]))
         #l2_norm = 0
         #l1_norm = tf.reduce_mean(tf.norm(tensor = ((fake_data_by_real_parameter-real_data[1])**2), ord='euclidean'))
@@ -193,7 +193,7 @@ class GAN():
             inter = (alpha * a) + ((1-alpha)*b)
             inter.set_shape(a.shape)
             return inter
-        x_img = _interpolate(real_data[1][1], fake_data)
+        x_img = _interpolate(real_data[1], fake_data)
         with tf.GradientTape() as tape:
             tape.watch(x_img)
             pred_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], x_img])
@@ -233,25 +233,16 @@ class GAN():
             # std = tf.reshape(real_data[1][3], [self.batchSize, 1, 1, 1])
 
             fake_data = self.gen([random_vector1, random_vector2, random_vector3],training = True)
-            real_logit = self.dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1][1]] , training = True)
+            real_logit = self.dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]] , training = True)
             fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             real_loss, fake_loss = self.discriminator_loss(real_logit, fake_logit)
             gp_loss = self.gradient_penality(partial(self.dis, training = True), real_data, fake_data)
             dLoss = (real_loss + fake_loss) + gp_loss*self.gradient_penality_width
 
         D_grad = t.gradient(dLoss, self.dis.trainable_variables)
-        self.disrOptimizer.apply_gradients(zip(D_grad, self.dis.trainable_variables))
+        self.disOptimizer.apply_gradients(zip(D_grad, self.dis.trainable_variables))
         return real_loss + fake_loss, gp_loss
-    
-    @tf.function
-    def train_decoder(self, real_data):
-        with tf.GradientTape() as t:
-            predictM_S = self.decod([real_data[0][0], real_data[0][1], real_data[0][2]])
-            de_loss = self.decoder_loss(real_data[1][2], predictM_S)
-        de_grad = t.gradient(de_loss, self.decod.trainable_variables)
-        self.decoderOptimizer.apply_gradients(zip(de_grad, self.decod.trainable_variables))
-        return de_loss
-    
+ 
     def train_wgan(self):
 
         filename = os.listdir(self.dataSetDir)
@@ -269,55 +260,54 @@ class GAN():
             ds = tf.io.decode_raw(ds, tf.float32)
             ds = tf.reshape(ds, [self.width, self.length, 1])
             
-            mean = tf.reduce_mean(ds)
-            std = tf.math.reduce_std(ds) 
+            # mean = tf.reduce_mean(ds)
+            # std = tf.math.reduce_std(ds) 
             #M_S = tf.stack([tf.math.log(mean), tf.math.log(std)])         
-            return  (ds-mean)/std, ds  #M_S
+            return  ds #(ds-mean)/std #M_S
             
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
         data = tf.data.Dataset.zip((parameter123, data))
         #data = data.shuffle(800)
         train_data = data.take(self.trainSize)
+        training = train_data.take(self.trainSize - self.validationSize)
+        validating = train_data.skip(self.trainSize - self.validationSize)
+        train_data_batch = validating.batch(self.batchSize, drop_remainder = True)    
         test_data = data.skip(self.trainSize)
+        train_data_batch = training.batch(self.batchSize, drop_remainder = True)
+        #test_data_batch = test_data.batch(100, drop_remainder = True)
+        train_data_batch = train_data_batch.prefetch(buffer_size = AUTOTUNE)
+        print(list(train_data_batch.as_numpy_iterator())[0][2])
+        # summary_writer = tf.summary.create_file_writer(self.logdir)
+        # # tf.summary.trace_on(graph=True, profiler=True)
+        # saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)   #建立一個訓練規則
+        # epoch = 1
+        # while saveModel.training:
+        #     for step, real_data in enumerate(train_data):
         
-        train_data = train_data.batch(self.batchSize, drop_remainder = True)
-        test_data = test_data.batch(100, drop_remainder = True)
-        train_data = train_data.prefetch(buffer_size = AUTOTUNE)
-        
-        summary_writer = tf.summary.create_file_writer(self.logdir)
-        # tf.summary.trace_on(graph=True, profiler=True)
-        saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)
-        epoch = 1
-        while saveModel.training:
-            for step, real_data in enumerate(train_data):
+        #         # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
                 
+        #         d_loss, gp = self.train_discriminator(real_data)
+        #         g_loss= self.train_generator(real_data)
+        #         with summary_writer.as_default():
+        #             #hp.hparams(hparams)
+        #             tf.summary.scalar('RMSE', RMSE, epoch)
+        #             #tf.summary.scalar('Mean square error', MSE, epoch)
+        #             tf.summary.scalar('discriminator_loss', d_loss, self.disOptimizer.iterations)
+        #             tf.summary.scalar('generator_loss', g_loss, self.genOptimizer.iterations)
+        #             tf.summary.scalar('gradient_penalty', gp, self.disOptimizer.iterations)
+        #     predi_data = self.gen([])
+            
+            
+        #     #MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data)) / (data_max - data_min)  
+        #     RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / (data_max - data_min))     
+            
                 
-                # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2]
-                # real_data 中 real_data[1] 分別是 real_data[1][0]: 壓縮前， real_data[1][1]:壓縮後
-                d_loss, gp = self.train_discriminator(real_data)
-                g_loss= self.train_generator(real_data)
-
-                predi_data = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]])
-                
-                data_max = tf.reduce_max(real_data[1][1])
-                data_min = tf.reduce_min(real_data[1][1])
-              
-                #MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data)) / (data_max - data_min)  
-                RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1][1] - predi_data)**2)) / (data_max - data_min)) 
-            with summary_writer.as_default():
-                #hp.hparams(hparams)
-                tf.summary.scalar('RMSE', RMSE, epoch)
-                #tf.summary.scalar('Mean square error', MSE, epoch)
-                tf.summary.scalar('discriminator_loss', d_loss, epoch)
-                tf.summary.scalar('generator_loss', g_loss, epoch)
-                tf.summary.scalar('gradient_penalty', gp, epoch)
-                
-            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} RMSE: {RMSE* 100 :3.5f}%  ')
-            saveModel.on_epoch_end(RMSE)
-            if epoch%1000 == 0:
-                saveModel.save_model()
-            epoch += 1
+        #     print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} RMSE: {RMSE* 100 :3.5f}%  ')
+        #     saveModel.on_epoch_end(RMSE)
+        #     if epoch%1000 == 0:
+        #         saveModel.save_model()
+        #     epoch += 1
                             
             
       

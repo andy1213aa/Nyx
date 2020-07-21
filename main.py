@@ -28,7 +28,7 @@ def main():
                 HP_NUM_UNITS: num_units,
                 HP_BN_UNITS: bn_unit
             }
-            GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\NyxDataSet\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
+            GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
             GANs.train_wgan()
             num+=1
 
