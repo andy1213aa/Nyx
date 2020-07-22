@@ -255,10 +255,10 @@ class GAN():
         filename_list = [os.path.join(self.dataSetDir, file) for file in filename]
 
         file_queue = tf.data.Dataset.from_tensor_slices(filename_list)
-        data = tf.data.FixedLengthRecordDataset(file_queue, self.width*self.length*4)
+        data = tf.data.FixedLengthRecordDataset(file_queue, self.width*self.length*self.height*4)
         def process_input_data(ds):
             ds = tf.io.decode_raw(ds, tf.float32)
-            ds = tf.reshape(ds, [self.width, self.length, 1])
+            ds = tf.reshape(ds, [self.width, self.length, self.height])
             
             # mean = tf.reduce_mean(ds)
             # std = tf.math.reduce_std(ds) 
@@ -272,42 +272,42 @@ class GAN():
         train_data = data.take(self.trainSize)
         training = train_data.take(self.trainSize - self.validationSize)
         validating = train_data.skip(self.trainSize - self.validationSize)
-        train_data_batch = validating.batch(self.batchSize, drop_remainder = True)    
         test_data = data.skip(self.trainSize)
-        train_data_batch = training.batch(self.batchSize, drop_remainder = True)
-        #test_data_batch = test_data.batch(100, drop_remainder = True)
-        train_data_batch = train_data_batch.prefetch(buffer_size = AUTOTUNE)
-        print(list(train_data_batch.as_numpy_iterator())[0][2])
-        # summary_writer = tf.summary.create_file_writer(self.logdir)
-        # # tf.summary.trace_on(graph=True, profiler=True)
-        # saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)   #建立一個訓練規則
-        # epoch = 1
-        # while saveModel.training:
-        #     for step, real_data in enumerate(train_data):
         
-        #         # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
-                
-        #         d_loss, gp = self.train_discriminator(real_data)
-        #         g_loss= self.train_generator(real_data)
-        #         with summary_writer.as_default():
-        #             #hp.hparams(hparams)
-        #             tf.summary.scalar('RMSE', RMSE, epoch)
-        #             #tf.summary.scalar('Mean square error', MSE, epoch)
-        #             tf.summary.scalar('discriminator_loss', d_loss, self.disOptimizer.iterations)
-        #             tf.summary.scalar('generator_loss', g_loss, self.genOptimizer.iterations)
-        #             tf.summary.scalar('gradient_penalty', gp, self.disOptimizer.iterations)
-        #     predi_data = self.gen([])
-            
-            
-        #     #MSE = tf.reduce_mean(tf.keras.losses.MSE(real_data[1][1] ,  predi_data)) / (data_max - data_min)  
-        #     RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / (data_max - data_min))     
-            
-                
-        #     print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} RMSE: {RMSE* 100 :3.5f}%  ')
-        #     saveModel.on_epoch_end(RMSE)
-        #     if epoch%1000 == 0:
-        #         saveModel.save_model()
-        #     epoch += 1
+        training_batch = training.batch(self.batchSize, drop_remainder = True)
+        validating_batch = validating.batch(self.validationSize, drop_remainder = True)    
+
+        test_data_batch = test_data.batch(100, drop_remainder = True)
+        training_batch = training_batch.prefetch(buffer_size = AUTOTUNE)
+        validating_batch = validating_batch.prefetch(buffer_size = AUTOTUNE)
+       
+        summary_writer = tf.summary.create_file_writer(self.logdir)
+        # tf.summary.trace_on(graph=True, profiler=True)
+        saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)   #建立一個訓練規則
+
+        epoch = 1
+        data_max = tf.reduce_max(list(validating_batch.as_numpy_iterator())[0][1])
+        data_min = tf.reduce_min(list(validating_batch.as_numpy_iterator())[0][1])
+
+        while saveModel.training:
+            for step, real_data in enumerate(training_batch):
+                # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
+                d_loss, gp = self.train_discriminator(real_data)
+                g_loss= self.train_generator(real_data)
+            predi_data = self.gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
+            RMSE =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min))     
+            l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (data_max - data_min)
+            with summary_writer.as_default():
+                    #hp.hparams(hparams)
+                tf.summary.scalar('RMSE', RMSE, epoch)
+                tf.summary.scalar('discriminator_loss', d_loss, epoch)
+                tf.summary.scalar('generator_loss', g_loss, epoch)
+                tf.summary.scalar('gradient_penalty', gp, epoch)
+            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} L2: {l2:10f} RMSE: {RMSE* 100 :3.5f}%  ')
+            saveModel.on_epoch_end(l2)
+            if epoch%1000 == 0:
+                saveModel.save_model()
+            epoch += 1
                             
             
       

@@ -1,6 +1,6 @@
 import os
 from tensorboard.plugins.hparams import api as hp
-from GAN_version16_16 import GAN
+from GAN import GAN
 import datetime
 import tensorflow as tf
 
@@ -11,7 +11,7 @@ def main():
 
     now = datetime.datetime.now()
     nowDate = f'{now.year}-{now.month}-{now.day}'+'_'+f'{now.hour}-{now.minute}'
-    dirs = 'wgan\\' + nowDate + '\\'
+    dirs = 'E:\\NTNU1-2\\Nyx\\NyxDataSet\\wgan\\' + nowDate + '\\'
 
     with tf.summary.create_file_writer(dirs).as_default():
         hp.hparams_config(
@@ -28,7 +28,7 @@ def main():
                 HP_NUM_UNITS: num_units,
                 HP_BN_UNITS: bn_unit
             }
-            GANs = GAN(length = 16, width = 16, height = 1, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
+            GANs = GAN(length = 16, width = 16, height = 16, batchSize = 64, epochs = 5000, dataSetDir = r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet16_16_16', hparams = hparams, logdir = dirs+'\\'+session_num)
             GANs.train_wgan()
             num+=1
 
