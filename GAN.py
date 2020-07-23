@@ -28,15 +28,11 @@ class GAN():
         self.L2_coefficient =0.5# 1/(length*width*height)
         self.validationSize = 59
         self.dis = self.discriminator()
-        self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, 
-                                                          clipvalue = 1.0, 
-                                                          decay = 1e-8)
-        # self.disOptimizer = keras.optimizers.Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.9)
+        self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
+        #self.disOptimizer = keras.optimizers.Adam(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
         self.gen = self.generator()
-        self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, 
-                                                    clipvalue = 1.0, 
-                                                    decay = 1e-8)
-        # self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, beta_1 = 0.5, beta_2 = 0.9)                                            
+        self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
+        #self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)                                            
         self.gradient_penality_width = 10.0
 
 
@@ -77,18 +73,18 @@ class GAN():
 
         concatenate = layers.concatenate(inputs = [x, y, z])
         
-        g =layers.Dense(4*4*2*self.filterNumber)(concatenate)
-        g = layers.Reshape((4, 4, 2*self.filterNumber))(g)
+        g =layers.Dense(4*4*4*2*self.filterNumber)(concatenate)
+        g = layers.Reshape((4, 4, 4, 2*self.filterNumber))(g)
         
         for i in range(int(log(self.width/4, 2))-1, -1, -1):
            # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
-            g = layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+            g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
             
             g = layers.LeakyReLU()(g)
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
-        g = layers.Conv2DTranspose(16, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
+        g = layers.Conv3DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
         
         #g = layers.Activation(tf.nn.tanh)(g)
         
@@ -100,7 +96,7 @@ class GAN():
         # parameter1_input = keras.Input(shape = (1), name = 'parameter1')
         # parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         # parameter3_input = keras.Input(shape = (1), name = 'parameter3')
-        dataInput = keras.Input(shape = (self.length,self.width, self.height), name = 'groundTruth/fake')
+        dataInput = keras.Input(shape = (self.length,self.width, self.height, 1), name = 'groundTruth/fake')
 
         # x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
         # # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
@@ -144,18 +140,18 @@ class GAN():
         
 
         #d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
-        d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
+        d = SpectralNormalization(layers.Conv3D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
         
         d = layers.LeakyReLU()(d)
         for i in range(1, int(log(self.width/8, 2))+1):
-            d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
+            d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
             d = layers.LeakyReLU()(d)
         
 
 
-        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4,  1] , strides=[1, 1, 1, 1], padding='VALID')*(self.height*self.width)
+        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4, 4,  1] , strides=[1, 1, 1, 1,  1], padding='VALID')*(self.height*self.width)
         d = layers.Flatten()(d)
 
         # f1 = tf.multiply(d, xyz)
@@ -263,7 +259,7 @@ class GAN():
         data = tf.data.FixedLengthRecordDataset(file_queue, self.width*self.length*self.height*4)
         def process_input_data(ds):
             ds = tf.io.decode_raw(ds, tf.float32)
-            ds = tf.reshape(ds, [self.width, self.length, self.height])
+            ds = tf.reshape(ds, [self.width, self.length, self.height, 1])
             
             # mean = tf.reduce_mean(ds)
             # std = tf.math.reduce_std(ds) 
