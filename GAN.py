@@ -1,4 +1,3 @@
-
 import tensorflow.keras as keras
 import numpy as np
 from tensorflow.keras import layers
@@ -273,16 +272,16 @@ class GAN():
         data = tf.data.Dataset.zip((parameter123, data))
         #data = data.shuffle(800)
         train_data = data.take(self.trainSize)
-        training = train_data.take(self.trainSize - self.validationSize)
-        validating = train_data.skip(self.trainSize - self.validationSize)
+        training = train_data.take(self.trainSize)
+
         test_data = data.skip(self.trainSize)
         
         training_batch = training.batch(self.batchSize, drop_remainder = True)
-        validating_batch = validating.batch(self.validationSize, drop_remainder = True)    
+       
 
         test_data_batch = test_data.batch(100, drop_remainder = True)
         training_batch = training_batch.prefetch(buffer_size = AUTOTUNE)
-        validating_batch = validating_batch.prefetch(buffer_size = AUTOTUNE)
+       
 
         summary_writer = tf.summary.create_file_writer(self.logdir)
         # tf.summary.trace_on(graph=True, profiler=True)
@@ -297,9 +296,12 @@ class GAN():
                 # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
                 d_loss, gp = self.train_discriminator(real_data)
                 g_loss= self.train_generator(real_data)
-            predi_data = self.gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])      
-            RMSE =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (self.data_max - self.data_min))
-            l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (self.data_max - self.data_min)
+                predi_data = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
+            
+                RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / (self.data_max - self.data_min))
+            
+                l2 = tf.norm(tensor = real_data[1]-predi_data) / (self.data_max - self.data_min)
+                
             with summary_writer.as_default():
                     #hp.hparams(hparams)
                 tf.summary.scalar('RMSE', RMSE, epoch)
@@ -311,11 +313,3 @@ class GAN():
             if epoch%1000 == 0:
                 saveModel.save_model()
             epoch += 1
-                            
-            
-      
-
-
-
-
-
