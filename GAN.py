@@ -22,10 +22,12 @@ class GAN():
         self.hparams = hparams
         self.recordepoch = 100
         self.logdir = logdir
+        self.datamax = 0
+        self.datamin = 0
 
         self.trainSize = 699
         self.filterNumber = 16
-        self.L2_coefficient =0.5# 1/(length*width*height)
+        self.L2_coefficient =0.5 #1/(length*width*height)
         self.validationSize = 59
         self.dis = self.discriminator()
         self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
@@ -73,13 +75,12 @@ class GAN():
 
         concatenate = layers.concatenate(inputs = [x, y, z])
         
-        g =layers.Dense(4*4*4*2*self.filterNumber)(concatenate)
-        g = layers.Reshape((4, 4, 4, 2*self.filterNumber))(g)
+        g =layers.Dense(4*4*4*int(self.width/4)*self.filterNumber)(concatenate)
+        g = layers.Reshape((4, 4, 4, int(self.width/4)*self.filterNumber))(g)
         
         for i in range(int(log(self.width/4, 2))-1, -1, -1):
            # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
             g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-            
             g = layers.LeakyReLU()(g)
         
 
@@ -143,7 +144,7 @@ class GAN():
         d = SpectralNormalization(layers.Conv3D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
         
         d = layers.LeakyReLU()(d)
-        for i in range(1, int(log(self.width/8, 2))+1):
+        for i in range(1, int(log(self.width/2, 2))-1):
             d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
@@ -151,9 +152,10 @@ class GAN():
         
 
 
-        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4, 4,  1] , strides=[1, 1, 1, 1,  1], padding='VALID')*(self.height*self.width)
-        d = layers.Flatten()(d)
-
+        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4, 4,  1] , strides=[1, 1, 1, 1,  1], padding='VALID')*(self.height*self.width*self.length)
+        
+        
+        #d = layers.Flatten()(d)
         # f1 = tf.multiply(d, xyz)
         # f2 = layers.Dense(1)(d)
         # r = layers.Add()([f1, f2])
@@ -287,17 +289,17 @@ class GAN():
         saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)   #建立一個訓練規則
 
         epoch = 1
-        data_max = tf.reduce_max(list(validating_batch.as_numpy_iterator())[0][1])
-        data_min = tf.reduce_min(list(validating_batch.as_numpy_iterator())[0][1])
+        self.data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
+        self.data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
 
         while saveModel.training:
             for step, real_data in enumerate(training_batch):
                 # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
                 d_loss, gp = self.train_discriminator(real_data)
                 g_loss= self.train_generator(real_data)
-            predi_data = self.gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
-            RMSE =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min))     
-            l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (data_max - data_min)
+            predi_data = self.gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])      
+            RMSE =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (self.data_max - self.data_min))
+            l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (self.data_max - self.data_min)
             with summary_writer.as_default():
                     #hp.hparams(hparams)
                 tf.summary.scalar('RMSE', RMSE, epoch)
