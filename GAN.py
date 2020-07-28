@@ -26,7 +26,7 @@ class GAN():
 
         self.trainSize = 699
         self.filterNumber = 16
-        self.L2_coefficient =0.5 #1/(length*width*height)
+        self.L2_coefficient =1/(length*width*height)
         self.validationSize = 59
         self.dis = self.discriminator()
         self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
@@ -93,50 +93,50 @@ class GAN():
         return model
     
     def discriminator(self):
-        # parameter1_input = keras.Input(shape = (1), name = 'parameter1')
-        # parameter2_input = keras.Input(shape = (1), name = 'parameter2')
-        # parameter3_input = keras.Input(shape = (1), name = 'parameter3')
+        parameter1_input = keras.Input(shape = (1), name = 'parameter1')
+        parameter2_input = keras.Input(shape = (1), name = 'parameter2')
+        parameter3_input = keras.Input(shape = (1), name = 'parameter3')
         dataInput = keras.Input(shape = (self.length,self.width, self.height, 1), name = 'groundTruth/fake')
 
-        # x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
-        # # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
-        # x = layers.LeakyReLU()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
         
-        # x = layers.Dense(512, name = 'parameter1_layer_2')(x)
-        # # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
-        # x = layers.LeakyReLU()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_2')(x)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
 
-        # x = layers.Dense(512, name = 'parameter1_layer_3')(x)
-        # # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
-        # x = layers.LeakyReLU()(x)
+        x = layers.Dense(512, name = 'parameter1_layer_3')(x)
+        # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
         
-        # y = layers.Dense(512, name = 'parameter2_layer_1')(parameter2_input)
-        # # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_1')(parameter2_input)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
 
-        # y = layers.Dense(512, name = 'parameter2_layer_2')(y)
-        # # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_2')(y)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
 
-        # y = layers.Dense(512, name = 'parameter2_layer_3')(y)
-        # # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
-        # y = layers.LeakyReLU()(y)
+        y = layers.Dense(512, name = 'parameter2_layer_3')(y)
+        # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
+        y = layers.LeakyReLU()(y)
         
-        # z = layers.Dense(512, name = 'parameter3_layer_1')(parameter3_input)
-        # # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_1')(parameter3_input)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # z = layers.Dense(512, name = 'parameter3_layer_2')(z)
-        # # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_2')(z)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # z = layers.Dense(512, name = 'parameter3_layer_3')(z)
-        # # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
-        # z = layers.LeakyReLU()(z)
+        z = layers.Dense(512, name = 'parameter3_layer_3')(z)
+        # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
+        z = layers.LeakyReLU()(z)
 
-        # concatenate = layers.concatenate(inputs = [x, y, z])
-        # xyz = layers.Dense((int(log(self.width/8, 2))+1)*self.filterNumber)(concatenate)    #Depends on how many level of conv2D you have
-        # xyz = layers.LeakyReLU()(xyz)
+        concatenate = layers.concatenate(inputs = [x, y, z])
+        xyz = layers.Dense((int(log(self.width/8, 2))+1)*self.filterNumber)(concatenate)    #Depends on how many level of conv2D you have
+        xyz = layers.LeakyReLU()(xyz)
         
 
         #d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
@@ -154,16 +154,16 @@ class GAN():
         d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4, 4,  1] , strides=[1, 1, 1, 1,  1], padding='VALID')*(self.height*self.width*self.length)
         
         
-        #d = layers.Flatten()(d)
-        # f1 = tf.multiply(d, xyz)
-        # f2 = layers.Dense(1)(d)
-        # r = layers.Add()([f1, f2])
+        d = layers.Flatten()(d)
+        f1 = tf.multiply(d, xyz)
+        f2 = layers.Dense(1)(d)
+        r = layers.Add()([f1, f2])
         
-        #r = layers.Activation(tf.nn.tanh)(r)
+        r = layers.Activation(tf.nn.tanh)(r)
 
 
-        #model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = d)
-        model = keras.Model(inputs = [dataInput], outputs = d)
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = d)
+        #model = keras.Model(inputs = [dataInput], outputs = d)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
     
@@ -214,8 +214,8 @@ class GAN():
             fake_data_by_random_parameter = self.gen([random_vector1, random_vector2, random_vector3],training = True)  #generate by random parameter
             fake_data_by_real_parameter = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
 
-            #fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
-            fake_logit = self.dis([fake_data_by_random_parameter], training = False)
+            fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
+            #fake_logit = self.dis([fake_data_by_random_parameter], training = False)
             fake_loss, l2_norm = self.generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
             gLoss = fake_loss+self.L2_coefficient*l2_norm
         gradients = tape.gradient(gLoss, self.gen.trainable_variables)
