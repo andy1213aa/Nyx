@@ -7,7 +7,6 @@ from functools import partial
 from math import log
 from resblock import ResBlock_generator, ResBlock_discriminator
 import tensorflow as tf
-from SpectralNormalization import SpectralNormalization
 import os
 
 class GAN():

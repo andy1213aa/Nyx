@@ -6,11 +6,11 @@ class ResBlock_generator(layers.Layer):
       super(ResBlock_generator, self).__init__()
 
       
-      self.bn_0 = layers.BatchNormalization()
+      #self.bn_0 = layers.BatchNormalization()
       self.relu0 = layers.LeakyReLU()
       self.upSample = layers.UpSampling3D()
       self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rg_conv1'))
-      self.bn_1 = layers.BatchNormalization()
+      #self.bn_1 = layers.BatchNormalization()
       self.relu1 = layers.LeakyReLU()
       self.conv_2 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rg_conv2'))
       
@@ -22,11 +22,11 @@ class ResBlock_generator(layers.Layer):
 
   def call(self, inputs, training=None):
 
-      x = self.bn_0(inputs)
-      x = self.relu0(x)
+      #x = self.bn_0(inputs)
+      x = self.relu0(inputs)
       x = self.upSample(x)
       x = self.conv_1(x)
-      x = self.bn_1(x)
+      #x = self.bn_1(x)
       x = self.relu1(x)
       x = self.conv_2(x)
       
