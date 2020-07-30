@@ -11,11 +11,11 @@ from SpectralNormalization import SpectralNormalization
 import os
 
 class GAN():
-    def __init__(self, length, width, height, batchSize):
+    def __init__(self, length, width, height):
         self.length = length
         self.width = width
         self.height = height
-        self.batchSize = batchSize
+
         self.filterNumber = 16
         self.L2_coefficient =1/(length*width*height)
         self.dis = self.discriminator()
@@ -25,7 +25,7 @@ class GAN():
         #self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
         self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)                                            
         self.gradient_penality_width = 10.0
-
+        self.test = 0
 
     def generator(self):
         parameter1_input = keras.Input(shape = (1), name = 'parameter1')
@@ -81,7 +81,7 @@ class GAN():
         parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
         dataInput = keras.Input(shape = (self.length,self.width, self.height, 1), name = 'groundTruth/fake')
-
+    
         x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
         # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
@@ -116,7 +116,7 @@ class GAN():
         d = ResBlock_discriminator(self.filterNumber)(dataInput)
         d = layers.LeakyReLU()(d)
         for i in range(1, int(log(self.width/2, 2))-1):
-            d = ResBlock_discriminator((2**i)*self.filterNumber)(dataInput)
+            d = ResBlock_discriminator((2**i)*self.filterNumber)(d)
             #d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
@@ -166,14 +166,8 @@ class GAN():
         return gp_loss    
     
     @tf.function
-    def train_generator(self, real_data):
+    def train_generator(self, real_data, random_vector1, random_vector2, random_vector3):
         with tf.GradientTape() as tape:
-            random_vector1 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.12, maxval=0.16)
-            random_vector2 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.021, maxval=0.024)
-            random_vector3 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.55, maxval=0.9)
-            print(random_vector1)
-            # mean = tf.reshape(real_data[1][2], [self.batchSize, 1, 1, 1])
-            # std = tf.reshape(real_data[1][3], [self.batchSize, 1, 1, 1])
             
             fake_data_by_random_parameter = self.gen([random_vector1, random_vector2, random_vector3],training = True)  #generate by random parameter
             fake_data_by_real_parameter = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
@@ -187,14 +181,9 @@ class GAN():
         return gLoss
     
     @tf.function
-    def train_discriminator(self, real_data):
+    def train_discriminator(self, real_data, random_vector1, random_vector2, random_vector3):
         with tf.GradientTape() as t:
-            random_vector1 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.12, maxval=0.16)
-            random_vector2 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.021, maxval=0.024)
-            random_vector3 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.55, maxval=0.9)
-
-            # mean = tf.reshape(real_data[1][2], [self.batchSize, 1, 1, 1])
-            # std = tf.reshape(real_data[1][3], [self.batchSize, 1, 1, 1])
+      
 
             fake_data = self.gen([random_vector1, random_vector2, random_vector3],training = True)
             real_logit = self.dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]] , training = True)

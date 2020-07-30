@@ -39,22 +39,24 @@ def main():
 
 
 
-    model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'], batchSize = dataSetConfig['batchSize'])
+    model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
     training_batch, testing_batch = generateData(dataSetConfig)
     
     summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
     # tf.summary.trace_on(graph=True, profiler=True)
     saveModel = SaveModel(model.gen,dataSetConfig, mode = 'min', save_weights_only=False)   #建立一個訓練規則
 
-    epoch = 1
     data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
     data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
     dataRange = data_max - data_min
     while saveModel.training:
         for _, real_data in enumerate(training_batch):
             # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
-            d_loss, gp = model.train_discriminator(real_data)
-            g_loss= model.train_generator(real_data)
+            random_vector1 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.12, maxval=0.16)
+            random_vector2 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.021, maxval=0.024)
+            random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
+            d_loss, gp = model.train_discriminator(real_data, random_vector1, random_vector2, random_vector3)
+            g_loss= model.train_generator(real_data, random_vector1, random_vector2, random_vector3)
             predi_data = model.gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
         
             RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
@@ -63,15 +65,15 @@ def main():
             
         with summary_writer.as_default():
                 #hp.hparams(hparams)
-            tf.summary.scalar('RMSE', RMSE, epoch)
-            tf.summary.scalar('discriminator_loss', d_loss, epoch)
-            tf.summary.scalar('generator_loss', g_loss, epoch)
-            tf.summary.scalar('gradient_penalty', gp, epoch)
+            tf.summary.scalar('RMSE', RMSE, saveModel.epoch)
+            tf.summary.scalar('discriminator_loss', d_loss, saveModel.epoch)
+            tf.summary.scalar('generator_loss', g_loss, saveModel.epoch)
+            tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
 
-        print(f'Epoch: {saveModel.epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} L2: {l2:10f} RMSE: {RMSE* 100 :3.5f}%  ')
+        print(f'Epoch: {saveModel.epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} L2: {l2:10f} RMSE: {RMSE* 100 :3.5f}% ')
         saveModel.on_epoch_end(RMSE)
-        if epoch%1000 == 0:
+        if saveModel.epoch%1000 == 0:
             saveModel.save_model()
             saveModel.save_config(RMSE)
-        epoch += 1
+      
 main()
