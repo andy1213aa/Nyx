@@ -5,26 +5,17 @@ from tensorflow.keras.utils import plot_model
 from IPython.display import Image
 from functools import partial
 from math import log
-from SaveModel import SaveModel
+
 import tensorflow as tf
 from SpectralNormalization import SpectralNormalization
 import os
 
 class GAN():
-    def __init__(self, length, width, height, batchSize, epochs, dataSetDir,hparams, logdir):
+    def __init__(self, length, width, height, batchSize):
         self.length = length
         self.width = width
         self.height = height
         self.batchSize = batchSize
-        self.epochs = epochs
-        self.dataSetDir = dataSetDir 
-        self.hparams = hparams
-        self.recordepoch = 100
-        self.logdir = logdir
-        self.datamax = 0
-        self.datamin = 0
-
-        self.trainSize = 699
         self.filterNumber = 16
         self.L2_coefficient =1/(length*width*height)
         self.dis = self.discriminator()
@@ -138,9 +129,6 @@ class GAN():
         f1 = tf.multiply(d, xyz)
         f2 = layers.Dense(1)(d)
         r = layers.Add()([f1, f2])
-        
-        #r = layers.Activation(tf.nn.tanh)(r)
-
 
         model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = r)
         #model = keras.Model(inputs = [dataInput], outputs = d)
@@ -149,16 +137,10 @@ class GAN():
     
     
     def generator_loss(self, fake_logit, real_data, fake_data_by_real_parameter):
-        # l1Loss = 0
-        # for i in range(self.batchSize):
-        #     l1Loss += tf.norm((fake_data_by_real_parameter[i] - real_data[1][i]), ord=2)**2
-        # l1Loss/=self.batchSize
         l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1]), ord='euclidean')
-        #rmse = tf.sqrt(tf.reduce_mean((real_data[1][1] - fake_data_by_real_parameter)**2)) / (tf.reduce_max(real_data[1][1]) - tf.reduce_min(real_data[1][1]))
-        #l2_norm = 0
-        #l1_norm = tf.reduce_mean(tf.norm(tensor = ((fake_data_by_real_parameter-real_data[1])**2), ord='euclidean'))
         g_loss = - tf.reduce_mean(fake_logit)
         return g_loss, l2_norm
+
     def discriminator_loss(self, real_logit, fake_logit):
         real_loss = -tf.reduce_mean(real_logit)
         fake_loss = tf.reduce_mean(fake_logit)
@@ -225,71 +207,3 @@ class GAN():
         self.disOptimizer.apply_gradients(zip(D_grad, self.dis.trainable_variables))
         return real_loss + fake_loss, gp_loss
  
-    def train_wgan(self):
-
-        filename = os.listdir(self.dataSetDir)
-                                            
-        parameter1 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[5:12]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-        parameter2 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[13:20]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-        parameter3 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[21:28]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-        parameter123 = tf.data.Dataset.zip((parameter1, parameter2, parameter3))
-
-        filename_list = [os.path.join(self.dataSetDir, file) for file in filename]
-
-        file_queue = tf.data.Dataset.from_tensor_slices(filename_list)
-        data = tf.data.FixedLengthRecordDataset(file_queue, self.width*self.length*self.height*4)
-        def process_input_data(ds):
-            ds = tf.io.decode_raw(ds, tf.float32)
-            ds = tf.reshape(ds, [self.width, self.length, self.height, 1])
-            
-            # mean = tf.reduce_mean(ds)
-            # std = tf.math.reduce_std(ds) 
-            #M_S = tf.stack([tf.math.log(mean), tf.math.log(std)])         
-            return  ds #(ds-mean)/std #M_S
-            
-        AUTOTUNE = tf.data.experimental.AUTOTUNE
-        data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
-        data = tf.data.Dataset.zip((parameter123, data))
-        #data = data.shuffle(800)
-        train_data = data.take(self.trainSize)
-        training = train_data.take(self.trainSize)
-
-        test_data = data.skip(self.trainSize)
-        
-        training_batch = training.batch(self.batchSize, drop_remainder = True)
-       
-
-        test_data_batch = test_data.batch(100, drop_remainder = True)
-        training_batch = training_batch.prefetch(buffer_size = AUTOTUNE)
-       
-
-        summary_writer = tf.summary.create_file_writer(self.logdir)
-        # tf.summary.trace_on(graph=True, profiler=True)
-        saveModel = SaveModel(self.gen, self.logdir, mode = 'min', save_weights_only=False)   #建立一個訓練規則
-
-        epoch = 1
-        self.data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
-        self.data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
-
-        while saveModel.training:
-            for step, real_data in enumerate(training_batch):
-                # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
-                d_loss, gp = self.train_discriminator(real_data)
-                g_loss= self.train_generator(real_data)
-                predi_data = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
-            
-                RMSE =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / (self.data_max - self.data_min))
-            
-                l2 = tf.norm(tensor = real_data[1]-predi_data) / (self.data_max - self.data_min)
-                
-            with summary_writer.as_default():
-                    #hp.hparams(hparams)
-                tf.summary.scalar('RMSE', RMSE, epoch)
-                tf.summary.scalar('discriminator_loss', d_loss, epoch)
-                tf.summary.scalar('generator_loss', g_loss, epoch)
-                tf.summary.scalar('gradient_penalty', gp, epoch)
-            print(f'Epoch: {epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} L2: {l2:10f} RMSE: {RMSE* 100 :3.5f}%  ')
-            saveModel.on_epoch_end(RMSE)
-            if epoch%1000 == 0:
-                saveModel.save_model()
-            epoch += 1

@@ -1,12 +1,12 @@
 import tensorflow as tf
 import numpy as np
-
+import datetime
 class SaveModel(tf.keras.callbacks.Callback):
-    def __init__(self, model, weights_file, mode = 'min', save_weights_only = False):
+    def __init__(self, model, dataSetConfig, mode = 'min', save_weights_only = False):
         super(SaveModel, self).__init__()
         self.model = model
         # setting directory of saving weight
-        self.weights_file = weights_file
+        self.dataSetConfig = dataSetConfig
 
         # biggest better or lowest better
         self.mode = mode
@@ -18,15 +18,39 @@ class SaveModel(tf.keras.callbacks.Callback):
             self.best = -np.inf
         self.counter = 0
         self.training = True
+        self.epoch = 1
     def save_model(self):
         if self.save_weights_only:
-            self.save_weights(self.weights_file)
+            self.save_weights(self.dataSetConfig['logDir'])
         else:
-            self.model.save(self.weights_file)
+            self.model.save(self.dataSetConfig['logDir'])
+    def save_config(self, monitor_value):
+        saveLogTxt = f"""
+    Parameter Setting
+    =======================================================
+    DataSet: { self.dataSetConfig['dataSet']}
+    DataShape: ({ self.dataSetConfig['length']}, { self.dataSetConfig['width']}, {self.dataSetConfig['height']})
+    DataSize: {self.dataSetConfig['datasize']}
+    TrainingSize: { self.dataSetConfig['trainSize']}
+    TestingSize: { self.dataSetConfig['testSize']}
+    BatchSize: { self.dataSetConfig['batchSize']}
+    =======================================================
+
+    Training log
+    =======================================================
+    Training start: { self.dataSetConfig['startingTime']}
+    Training stop: {datetime.datetime.now()}
+    Training epoch: {self.epoch}
+    Root Mean Square Error: {monitor_value*100}%
+    =======================================================
+    """
+        with open( self.dataSetConfig['logDir']+'config.txt', 'w') as f:
+            f.write(saveLogTxt) 
     def on_epoch_end(self, monitor_value, logs = None):
         # read monitor value from logs
         # monitor_value = logs.get(self.monitor)
         # Create the saving rule
+        
         if self.mode == 'min' and monitor_value < self.best:
             
             self.best = monitor_value
@@ -37,6 +61,7 @@ class SaveModel(tf.keras.callbacks.Callback):
             self.counter = 0
         else:
             self.counter += 1
-            if self.counter >= 1000:
+            if self.counter >= self.dataSetConfig['stopConsecutiveEpoch']:
                 self.save_model()
                 self.training = False
+        self.epoch += 1
