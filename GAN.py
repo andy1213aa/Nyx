@@ -5,7 +5,7 @@ from tensorflow.keras.utils import plot_model
 from IPython.display import Image
 from functools import partial
 from math import log
-
+from resblock import ResBlock_generator, ResBlock_discriminator
 import tensorflow as tf
 from SpectralNormalization import SpectralNormalization
 import os
@@ -62,7 +62,8 @@ class GAN():
         
         for i in range(int(log(self.width/4, 2))-1, -1, -1):
            # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
-            g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
+            g = ResBlock_generator((2**i)*self.filterNumber)(g)
+            #g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
             g = layers.LeakyReLU()(g)
         
 
@@ -111,11 +112,12 @@ class GAN():
         
 
         #d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
-        d = SpectralNormalization(layers.Conv3D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
-        
+        #d = SpectralNormalization(layers.Conv3D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
+        d = ResBlock_discriminator(self.filterNumber)(dataInput)
         d = layers.LeakyReLU()(d)
         for i in range(1, int(log(self.width/2, 2))-1):
-            d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
+            d = ResBlock_discriminator((2**i)*self.filterNumber)(dataInput)
+            #d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
             d = layers.LeakyReLU()(d)
@@ -169,7 +171,7 @@ class GAN():
             random_vector1 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.12, maxval=0.16)
             random_vector2 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.021, maxval=0.024)
             random_vector3 = tf.random.uniform(shape = (self.batchSize, 1), minval=0.55, maxval=0.9)
-            
+            print(random_vector1)
             # mean = tf.reshape(real_data[1][2], [self.batchSize, 1, 1, 1])
             # std = tf.reshape(real_data[1][3], [self.batchSize, 1, 1, 1])
             
