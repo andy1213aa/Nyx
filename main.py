@@ -1,9 +1,13 @@
-from GAN import GAN
+
 import datetime
 import tensorflow as tf
 from loadData import generateData
 import config
 from SaveModel import SaveModel
+from generator import generator
+from discriminator import discriminator
+from utlis import generator_loss, gradient_penality, discriminator_loss
+from functools import partial
 # def main():
 #     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([512]))
 #     HP_BN_UNITS = hp.HParam('BatchNormalization', hp.Discrete([False]))
@@ -35,16 +39,61 @@ from SaveModel import SaveModel
 
         
 def main():
+    
+   
+    @tf.function
+    def train_generator(real_data, random_vector1, random_vector2, random_vector3):
+        with tf.GradientTape() as tape:
+            
+            fake_data_by_random_parameter = gen(random_vector1, random_vector2, random_vector3,training = True)  #generate by random parameter
+            fake_data_by_real_parameter = gen(real_data[0][0], real_data[0][1], real_data[0][2],training = True) #generate by real parameter
+
+            fake_logit = dis(random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter, training = False)
+            #fake_logit = self.dis([fake_data_by_random_parameter], training = False)
+            fake_loss, l2_norm = generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
+            gLoss = fake_loss+L2_coefficient*l2_norm
+        gradients = tape.gradient(gLoss, gen.trainable_variables)
+        genOptimizer.apply_gradients(zip(gradients, gen.trainable_variables))
+        return gLoss
+
+    @tf.function
+    def train_discriminator(real_data, random_vector1, random_vector2, random_vector3):
+        with tf.GradientTape() as t:
+        
+
+            fake_data = gen(random_vector1, random_vector2, random_vector3,training = True)
+            real_logit = dis(real_data[0][0], real_data[0][1], real_data[0][2], real_data[1], training = True)
+            #real_logit = self.dis([real_data[1]] , training = True)
+            fake_logit = dis(random_vector1, random_vector2, random_vector3, fake_data, training = True)
+            #fake_logit = self.dis([fake_data], training = True)
+            real_loss, fake_loss = discriminator_loss(real_logit, fake_logit)
+            gp_loss = gradient_penality(partial(dis, training = True), real_data, fake_data)
+            dLoss = (real_loss + fake_loss) + gp_loss*gradient_penality_width
+
+        D_grad = t.gradient(dLoss, dis.trainable_variables)
+        disOptimizer.apply_gradients(zip(D_grad, dis.trainable_variables))
+        return real_loss + fake_loss, gp_loss
+    
+    
+    
     dataSetConfig = config.dataSet['Nyx'] #What data you want to load
+    #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
+    gen = generator()
+    dis = discriminator()
+    L2_coefficient =0.5#1/(length*width*height)
+    
+    #self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
+    disOptimizer = tf.keras.optimizers.Adam(lr = 0.0004,beta_1=0.9, beta_2 = 0.999)
+    
+    #self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
+    genOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999)                                            
+    gradient_penality_width = 10.0
 
-
-
-    model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
     training_batch, testing_batch = generateData(dataSetConfig)
     
     summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
     # tf.summary.trace_on(graph=True, profiler=True)
-    saveModel = SaveModel(model.gen,dataSetConfig, mode = 'min', save_weights_only=False)   #建立一個訓練規則
+    saveModel = SaveModel(gen,dataSetConfig, mode = 'min', save_weights_only=False)   #建立一個訓練規則
 
     data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
     data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
@@ -55,13 +104,13 @@ def main():
             random_vector1 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.12, maxval=0.16)
             random_vector2 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.021, maxval=0.024)
             random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
-            d_loss, gp = model.train_discriminator(real_data, random_vector1, random_vector2, random_vector3)
-            g_loss= model.train_generator(real_data, random_vector1, random_vector2, random_vector3)
-            predi_data = model.gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
+            d_loss, gp = train_discriminator(real_data, random_vector1, random_vector2, random_vector3)
+            g_loss= train_generator(real_data, random_vector1, random_vector2, random_vector3)
+            predi_data = gen(real_data[0][0], real_data[0][1], real_data[0][2])      
         
             RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
         
-            l2 = tf.norm(tensor = real_data[1]-predi_data) / dataRange
+            l2 = tf.norm(tensor = real_data[1]-predi_data)
             
         with summary_writer.as_default():
                 #hp.hparams(hparams)
@@ -74,6 +123,6 @@ def main():
         saveModel.on_epoch_end(RMSE)
         if saveModel.epoch%1000 == 0:
             saveModel.save_model()
-            saveModel.save_config(RMSE)
+            
       
 main()

@@ -42,7 +42,7 @@ class SpectralNormalization(layers.Wrapper):
         """Call `Layer`"""
         if training==None:
             training = K.learning_phase()
-        
+            
         if training==True:
             # Recompute weights for each forward pass
             self._compute_weights()

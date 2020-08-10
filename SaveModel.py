@@ -63,5 +63,6 @@ class SaveModel(tf.keras.callbacks.Callback):
             self.counter += 1
             if self.counter >= self.dataSetConfig['stopConsecutiveEpoch']:
                 self.save_model()
+                self.save_config(monitor_value)
                 self.training = False
         self.epoch += 1
