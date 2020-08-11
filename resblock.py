@@ -8,16 +8,16 @@ class ResBlock_generator(layers.Layer):
       
       #self.bn_0 = layers.BatchNormalization()
       self.relu0 = layers.PReLU()
-      self.upSample = layers.UpSampling2D()
-      self.conv_1 = SpectralNormalization(layers.Conv2D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rg_conv1'))
+      self.upSample = layers.UpSampling3D()
+      self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rg_conv1'))
       #self.bn_1 = layers.BatchNormalization()
       self.relu1 = layers.PReLU()
-      self.conv_2 = SpectralNormalization(layers.Conv2D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rg_conv2'))
+      self.conv_2 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rg_conv2'))
       
 
       #identity
-      self.upSample_identity = layers.UpSampling2D()
-      self.conv_identity = layers.Conv2D(out_shape,kernel_size=1,strides=1)
+      self.upSample_identity = layers.UpSampling3D()
+      self.conv_identity = layers.Conv3D(out_shape,kernel_size=1,strides=1)
 
 
   def call(self, inputs, training=None):
@@ -42,13 +42,13 @@ class ResBlock_discriminator(layers.Layer):
       super(ResBlock_discriminator, self).__init__()
 
       self.relu0 = layers.PReLU()
-      self.conv_1 = SpectralNormalization(layers.Conv2D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rd_conv1'))
+      self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rd_conv1'))
       self.relu1 = layers.PReLU()
-      self.conv_2 = SpectralNormalization(layers.Conv2D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rd_conv2'))
-      self.average_pool = layers.AveragePooling2D()
+      self.conv_2 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rd_conv2'))
+      self.average_pool = layers.AveragePooling3D()
 
       #identity
-      self.conv_identity = layers.Conv2D(out_shape, kernel_size=1 ,strides=1)
+      self.conv_identity = layers.Conv3D(out_shape, kernel_size=1 ,strides=1)
 
 
   def call(self, inputs, training=None):
