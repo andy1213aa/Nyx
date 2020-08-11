@@ -16,8 +16,9 @@ class GAN():
         self.width = width
         self.height = height
 
-        self.filterNumber = 16
-        self.L2_coefficient =1/(length*width*height)
+        self.filterNumber = 64
+        self.L2_coefficient = 0.5
+        self.feature_cofficient = 0.5 
         self.dis = self.discriminator()
         #self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
         self.disOptimizer = keras.optimizers.Adam(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
@@ -25,7 +26,7 @@ class GAN():
         #self.genOptimizer = keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
         self.genOptimizer = keras.optimizers.Adam(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)                                            
         self.gradient_penality_width = 10.0
-        self.test = 0
+       
 
     def generator(self):
         parameter1_input = keras.Input(shape = (1), name = 'parameter1')
@@ -77,6 +78,7 @@ class GAN():
         return model
     
     def discriminator(self):
+        disConvOutput = []
         parameter1_input = keras.Input(shape = (1), name = 'parameter1')
         parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
@@ -114,34 +116,41 @@ class GAN():
         #d = SpectralNormalization(layers.Conv2D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
         #d = SpectralNormalization(layers.Conv3D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
         d = ResBlock_discriminator(self.filterNumber)(dataInput)
-        d = layers.LeakyReLU()(d)
+       # d = layers.LeakyReLU()(d)
+        disConvOutput.append(d)
         for i in range(1, int(log(self.width/2, 2))-1):
             d = ResBlock_discriminator((2**i)*self.filterNumber)(d)
+            disConvOutput.append(d)
             #d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
-            d = layers.LeakyReLU()(d)
+        d = layers.LeakyReLU()(d)
         
 
 
-        d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4, 4,  1] , strides=[1, 1, 1, 1,  1], padding='VALID')*(self.height*self.width*self.length)
+        d = tf.keras.layers.GlobalAveragePooling3D()(d) * (self.height*self.width*self.length)
         
-        
-        d = layers.Flatten()(d)
         f1 = tf.multiply(d, xyz)
         f2 = layers.Dense(1)(d)
         r = layers.Add()([f1, f2])
-
-        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = r)
+        
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = [r, disConvOutput])
         #model = keras.Model(inputs = [dataInput], outputs = d)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
     
     
-    def generator_loss(self, fake_logit, real_data, fake_data_by_real_parameter):
-        l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1]), ord='euclidean')
-        g_loss = - tf.reduce_mean(fake_logit)
-        return g_loss, l2_norm
+    def generator_loss(self, real_logit, fake_logit, real_data, fake_data_by_real_parameter):
+        #volumetric loss
+        l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1]), ord='euclidean') / (self.length*self.width*self.height)
+        #Feature loss
+        feature_loss = 0
+        for i in range(len(fake_logit[1])):
+            feature_loss += tf.norm(tensor = (fake_logit[1][i]-real_logit[1][i]), ord='euclidean')
+        feature_loss/= len(fake_logit[1])
+        #Adversarial loss
+        g_loss = - tf.reduce_mean(fake_logit[0])
+        return g_loss, l2_norm, feature_loss
 
     def discriminator_loss(self, real_logit, fake_logit):
         real_loss = -tf.reduce_mean(real_logit)
@@ -160,7 +169,7 @@ class GAN():
             tape.watch(x_img)
             pred_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], x_img])
             #pred_logit = dis([x_img])
-        grad = tape.gradient(pred_logit, x_img)
+        grad = tape.gradient(pred_logit[0], x_img)
         norm = tf.norm(tf.reshape(grad, [tf.shape(grad)[0], -1]), axis = 1)
         gp_loss = tf.reduce_mean((norm-1.)**2)
         return gp_loss    
@@ -173,9 +182,10 @@ class GAN():
             fake_data_by_real_parameter = self.gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
 
             fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
+            real_logit = self.dis([real_data[0][0], real_data[0][1], real_data[0][2], fake_data_by_real_parameter], training = False)
             #fake_logit = self.dis([fake_data_by_random_parameter], training = False)
-            fake_loss, l2_norm = self.generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
-            gLoss = fake_loss+self.L2_coefficient*l2_norm
+            fake_loss, l2_norm, feature_loss= self.generator_loss(real_logit, fake_logit, real_data, fake_data_by_real_parameter)
+            gLoss = fake_loss + self.L2_coefficient * l2_norm + self.feature_cofficient * feature_loss
         gradients = tape.gradient(gLoss, self.gen.trainable_variables)
         self.genOptimizer.apply_gradients(zip(gradients, self.gen.trainable_variables))
         return gLoss
@@ -183,14 +193,13 @@ class GAN():
     @tf.function
     def train_discriminator(self, real_data, random_vector1, random_vector2, random_vector3):
         with tf.GradientTape() as t:
-      
 
             fake_data = self.gen([random_vector1, random_vector2, random_vector3],training = True)
             real_logit = self.dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]] , training = True)
             #real_logit = self.dis([real_data[1]] , training = True)
             fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             #fake_logit = self.dis([fake_data], training = True)
-            real_loss, fake_loss = self.discriminator_loss(real_logit, fake_logit)
+            real_loss, fake_loss = self.discriminator_loss(real_logit[0], fake_logit[0])
             gp_loss = self.gradient_penality(partial(self.dis, training = True), real_data, fake_data)
             dLoss = (real_loss + fake_loss) + gp_loss*self.gradient_penality_width
 

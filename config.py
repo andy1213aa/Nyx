@@ -12,7 +12,7 @@ Nyx={
 'datasize' : 799,
 'trainSize' : 699,
 'testSize' : 100,
-'batchSize' : 64,
+'batchSize' : 32,
 'length' : 16,
 'width' : 16,
 'height' : 16,

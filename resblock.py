@@ -52,7 +52,7 @@ class ResBlock_discriminator(layers.Layer):
 
 
   def call(self, inputs, training=None):
-
+      
       x = self.relu0(inputs)
       x = self.conv_1(x)
       x = self.relu1(x)
