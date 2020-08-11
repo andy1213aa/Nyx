@@ -21,7 +21,7 @@ def generateData(dataSetConfig):
     
     def process_input_data(ds):
         ds = tf.io.decode_raw(ds, dataType[dataSetConfig['dataType']][1])
-        ds = tf.reshape(ds, [dataSetConfig['width'], dataSetConfig['length'], dataSetConfig['height'], 1])       
+        ds = tf.reshape(ds, [dataSetConfig['width'], dataSetConfig['length'], dataSetConfig['height']])       
         return  ds
         
     AUTOTUNE = tf.data.experimental.AUTOTUNE

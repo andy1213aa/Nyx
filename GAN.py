@@ -4,7 +4,6 @@ from tensorflow.keras import layers
 from tensorflow.keras.utils import plot_model
 from IPython.display import Image
 from functools import partial
-from math import log
 from resblock import ResBlock_generator, ResBlock_discriminator
 import tensorflow as tf
 from SpectralNormalization import SpectralNormalization
@@ -58,18 +57,18 @@ class GAN():
 
         concatenate = layers.concatenate(inputs = [x, y, z])
         
-        g =layers.Dense(4*4*4*int(self.width/4)*self.filterNumber)(concatenate)
-        g = layers.Reshape((4, 4, 4, int(self.width/4)*self.filterNumber))(g)
+        g =layers.Dense(4*4*int(self.width/4)*self.filterNumber)(concatenate)
+        g = layers.Reshape((4, 4,  int(self.width/4)*self.filterNumber))(g)
         
-        for i in range(int(log(self.width/4, 2))-1, -1, -1):
+        for i in range(int(tf.math.log(self.width/4, 2))-1, -1, -1):
            # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
             g = ResBlock_generator((2**i)*self.filterNumber)(g)
             #g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
-            g = layers.LeakyReLU()(g)
+        g = layers.LeakyReLU()(g)
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
-        g = layers.Conv3DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
+        g = layers.Conv2D(1, kernel_size=3, strides=1, padding='same', use_bias=False)(g)
         
         #g = layers.Activation(tf.nn.tanh)(g)
         
@@ -82,7 +81,7 @@ class GAN():
         parameter1_input = keras.Input(shape = (1), name = 'parameter1')
         parameter2_input = keras.Input(shape = (1), name = 'parameter2')
         parameter3_input = keras.Input(shape = (1), name = 'parameter3')
-        dataInput = keras.Input(shape = (self.length,self.width, self.height, 1), name = 'groundTruth/fake')
+        dataInput = keras.Input(shape = (self.length,self.width, self.height), name = 'groundTruth/fake')
     
         x = layers.Dense(512, name = 'parameter1_layer_1')(parameter1_input)
         # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
@@ -109,7 +108,7 @@ class GAN():
         z = layers.LeakyReLU()(z)
 
         concatenate = layers.concatenate(inputs = [x, y, z])
-        xyz = layers.Dense((int(log(self.width/8, 2))+1)*self.filterNumber)(concatenate)    #Depends on how many level of conv2D you have
+        xyz = layers.Dense((int(tf.math.log(self.width/8, 2))+1)*self.filterNumber)(concatenate)    #Depends on how many level of conv2D you have
         xyz = layers.LeakyReLU()(xyz)
         
 
@@ -117,10 +116,10 @@ class GAN():
         #d = SpectralNormalization(layers.Conv3D(self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(dataInput)
         d = ResBlock_discriminator(self.filterNumber)(dataInput)
        # d = layers.LeakyReLU()(d)
-        disConvOutput.append(d)
+    
         for i in range(1, int(log(self.width/2, 2))-1):
             d = ResBlock_discriminator((2**i)*self.filterNumber)(d)
-            disConvOutput.append(d)
+       
             #d = SpectralNormalization(layers.Conv3D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)
             #d = SpectralNormalization(layers.Conv2D((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(d)#
             
@@ -128,13 +127,13 @@ class GAN():
         
 
 
-        d = tf.keras.layers.GlobalAveragePooling3D()(d) * (self.height*self.width*self.length)
+        d = tf.keras.layers.GlobalAveragePooling2D()(d) * (self.height*self.width*self.length)
         
         f1 = tf.multiply(d, xyz)
         f2 = layers.Dense(1)(d)
         r = layers.Add()([f1, f2])
         
-        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = [r, disConvOutput])
+        model = keras.Model(inputs = [parameter1_input, parameter2_input, parameter3_input, dataInput], outputs = r)
         #model = keras.Model(inputs = [dataInput], outputs = d)
         plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
         return model
@@ -144,13 +143,15 @@ class GAN():
         #volumetric loss
         l2_norm = tf.norm(tensor = (fake_data_by_real_parameter-real_data[1]), ord='euclidean') / (self.length*self.width*self.height)
         #Feature loss
-        feature_loss = 0
-        for i in range(len(fake_logit[1])):
-            feature_loss += tf.norm(tensor = (fake_logit[1][i]-real_logit[1][i]), ord='euclidean')
-        feature_loss/= len(fake_logit[1])
+        # feature_loss = 0
+        # for i in range(len(fake_logit[1])):
+        #     feature_loss += tf.norm(tensor = (fake_logit[1][i]-real_logit[1][i]), ord='euclidean')
+        #feature_loss/= len(fake_logit)
+
+
         #Adversarial loss
-        g_loss = - tf.reduce_mean(fake_logit[0])
-        return g_loss, l2_norm, feature_loss
+        g_loss = - tf.reduce_mean(fake_logit)
+        return g_loss, l2_norm#, feature_loss
 
     def discriminator_loss(self, real_logit, fake_logit):
         real_loss = -tf.reduce_mean(real_logit)
@@ -169,7 +170,7 @@ class GAN():
             tape.watch(x_img)
             pred_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], x_img])
             #pred_logit = dis([x_img])
-        grad = tape.gradient(pred_logit[0], x_img)
+        grad = tape.gradient(pred_logit, x_img)
         norm = tf.norm(tf.reshape(grad, [tf.shape(grad)[0], -1]), axis = 1)
         gp_loss = tf.reduce_mean((norm-1.)**2)
         return gp_loss    
@@ -184,8 +185,8 @@ class GAN():
             fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
             real_logit = self.dis([real_data[0][0], real_data[0][1], real_data[0][2], fake_data_by_real_parameter], training = False)
             #fake_logit = self.dis([fake_data_by_random_parameter], training = False)
-            fake_loss, l2_norm, feature_loss= self.generator_loss(real_logit, fake_logit, real_data, fake_data_by_real_parameter)
-            gLoss = fake_loss + self.L2_coefficient * l2_norm + self.feature_cofficient * feature_loss
+            fake_loss, l2_norm= self.generator_loss(real_logit, fake_logit, real_data, fake_data_by_real_parameter)
+            gLoss = fake_loss + self.L2_coefficient * l2_norm #+ self.feature_cofficient * feature_loss
         gradients = tape.gradient(gLoss, self.gen.trainable_variables)
         self.genOptimizer.apply_gradients(zip(gradients, self.gen.trainable_variables))
         return gLoss
@@ -199,7 +200,7 @@ class GAN():
             #real_logit = self.dis([real_data[1]] , training = True)
             fake_logit = self.dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             #fake_logit = self.dis([fake_data], training = True)
-            real_loss, fake_loss = self.discriminator_loss(real_logit[0], fake_logit[0])
+            real_loss, fake_loss = self.discriminator_loss(real_logit[0], fake_logit)
             gp_loss = self.gradient_penality(partial(self.dis, training = True), real_data, fake_data)
             dLoss = (real_loss + fake_loss) + gp_loss*self.gradient_penality_width
 
