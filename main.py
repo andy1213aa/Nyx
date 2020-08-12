@@ -43,6 +43,7 @@ def main():
    
     @tf.function
     def train_generator(real_data, random_vector1, random_vector2, random_vector3):
+        print('SIDE EFFECT')
         with tf.GradientTape() as tape:
             
             fake_data_by_random_parameter = gen(random_vector1, random_vector2, random_vector3,training = True)  #generate by random parameter
@@ -58,9 +59,9 @@ def main():
 
     @tf.function
     def train_discriminator(real_data, random_vector1, random_vector2, random_vector3):
+        print('SIDE EFFECT')
         with tf.GradientTape() as t:
         
-
             fake_data = gen(random_vector1, random_vector2, random_vector3,training = True)
             real_logit = dis(real_data[0][0], real_data[0][1], real_data[0][2], real_data[1], training = True)
             #real_logit = self.dis([real_data[1]] , training = True)
@@ -80,7 +81,7 @@ def main():
     #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
     gen = generator()
     dis = discriminator()
-    L2_coefficient =0.5#1/(length*width*height)
+    L2_coefficient =0.5#
     
     #self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
     disOptimizer = tf.keras.optimizers.Adam(lr = 0.0004,beta_1=0.9, beta_2 = 0.999)
@@ -93,7 +94,7 @@ def main():
     
     summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
     # tf.summary.trace_on(graph=True, profiler=True)
-    saveModel = SaveModel(gen,dataSetConfig, mode = 'min', save_weights_only=False)   #建立一個訓練規則
+    saveModel = SaveModel(gen,dataSetConfig, mode = 'min', save_weights_only=True)   #建立一個訓練規則
 
     data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
     data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
@@ -106,11 +107,11 @@ def main():
             random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
             d_loss, gp = train_discriminator(real_data, random_vector1, random_vector2, random_vector3)
             g_loss= train_generator(real_data, random_vector1, random_vector2, random_vector3)
-            predi_data = gen(real_data[0][0], real_data[0][1], real_data[0][2])      
-        
-            RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
-        
-            l2 = tf.norm(tensor = real_data[1]-predi_data)
+        predi_data = gen(real_data[0][0], real_data[0][1], real_data[0][2])      
+    
+        RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
+    
+        l2 = tf.norm(tensor = real_data[1]-predi_data)
             
         with summary_writer.as_default():
                 #hp.hparams(hparams)

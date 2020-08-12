@@ -7,27 +7,27 @@ class discriminator(tf.keras.Model):
         super(discriminator, self).__init__()
 
         self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
-        self.xR0 = layers.PReLU()
+        self.xR0 = layers.ReLU()
         self.xD1 = layers.Dense(512, name = 'parameter1_layer_2')
-        self.xR1 = layers.PReLU()
+        self.xR1 = layers.ReLU()
 
         self.yD0 = layers.Dense(512, name = 'parameter2_layer_1')
-        self.yR0 = layers.PReLU()
+        self.yR0 = layers.ReLU()
         self.yD1 = layers.Dense(512, name = 'parameter2_layer_2')
-        self.yR1 = layers.PReLU()
+        self.yR1 = layers.ReLU()
 
         self.zD0 = layers.Dense(512, name = 'parameter3_layer_1')
-        self.zR0 = layers.PReLU()
+        self.zR0 = layers.ReLU()
         self.zD1 = layers.Dense(512, name = 'parameter3_layer_2')
-        self.zR1 = layers.PReLU()
+        self.zR1 = layers.ReLU()
 
         self.concateD = layers.Dense(ch*2)
-        self.concateR = layers.PReLU()
+        self.concateR = layers.ReLU()
 
 
         self.res0 = ResBlock_discriminator(ch)
         self.res1 = ResBlock_discriminator(ch*2)
-        self.resR = layers.PReLU()
+        self.resR = layers.ReLU()
         self.GAV3D = layers.GlobalAveragePooling3D()
         
         #d = layers.Flatten()(d)
@@ -58,9 +58,9 @@ class discriminator(tf.keras.Model):
         d = self.res0(inputs)
         d = self.res1(d)
         d = self.resR(d)
-        print(d)
+       
         d = self.GAV3D(d) * (16*16*16)
-        print(d)
+   
         f1 = layers.Multiply()([d, xyz])
         f2 = self.outputD(d)
         r = layers.add([f1, f2])

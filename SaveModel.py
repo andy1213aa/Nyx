@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import datetime
 class SaveModel(tf.keras.callbacks.Callback):
-    def __init__(self, model, dataSetConfig, mode = 'min', save_weights_only = False):
+    def __init__(self, model, dataSetConfig, mode = 'min', save_weights_only = True):
         super(SaveModel, self).__init__()
         self.model = model
         # setting directory of saving weight
@@ -21,7 +21,7 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.epoch = 1
     def save_model(self):
         if self.save_weights_only:
-            self.save_weights(self.dataSetConfig['logDir'])
+            self.model.save_weights(self.dataSetConfig['logDir'])
         else:
             self.model.save(self.dataSetConfig['logDir'])
     def save_config(self, monitor_value):
