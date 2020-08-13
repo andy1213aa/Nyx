@@ -39,7 +39,7 @@ def main():
 
 
 
-    model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
+    model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'], batchSize = dataSetConfig['batchSize'])
     training_batch, testing_batch = generateData(dataSetConfig)
     
     summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
@@ -52,16 +52,14 @@ def main():
     while saveModel.training:
         for _, real_data in enumerate(training_batch):
             # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
-            random_vector1 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.12, maxval=0.16)
-            random_vector2 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.021, maxval=0.024)
-            random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
-            d_loss, gp = model.train_discriminator(real_data, random_vector1, random_vector2, random_vector3)
-            g_loss= model.train_generator(real_data, random_vector1, random_vector2, random_vector3)
-            predi_data = model.gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
-        
-            RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
-        
-            l2 = tf.norm(tensor = real_data[1]-predi_data) / dataRange
+            
+            d_loss, gp = model.train_discriminator(real_data)
+            g_loss= model.train_generator(real_data)
+        predi_data = model.gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
+    
+        RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
+    
+        l2 = tf.norm(tensor = real_data[1]-predi_data)
             
         with summary_writer.as_default():
                 #hp.hparams(hparams)
@@ -72,7 +70,7 @@ def main():
 
         print(f'Epoch: {saveModel.epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} L2: {l2:10f} RMSE: {RMSE* 100 :3.5f}% ')
         saveModel.on_epoch_end(RMSE)
-        if saveModel.epoch%1000 == 0:
+        if saveModel.epoch%100 == 0:
             saveModel.save_model()
             saveModel.save_config(RMSE)
       

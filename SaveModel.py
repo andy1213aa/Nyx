@@ -21,7 +21,7 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.epoch = 1
     def save_model(self):
         if self.save_weights_only:
-            self.save_weights(self.dataSetConfig['logDir'])
+            self.model.save_weights(self.dataSetConfig['logDir'])
         else:
             self.model.save(self.dataSetConfig['logDir'])
     def save_config(self, monitor_value):
@@ -63,5 +63,6 @@ class SaveModel(tf.keras.callbacks.Callback):
             self.counter += 1
             if self.counter >= self.dataSetConfig['stopConsecutiveEpoch']:
                 self.save_model()
+                self.save_config(monitor_value)
                 self.training = False
         self.epoch += 1
