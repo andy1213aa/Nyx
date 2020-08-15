@@ -19,7 +19,7 @@ Nyx={
 'dataType' : 'float',
 'numberOfParameter' : 3,
 'numberOfParameterDigit' : 7,
-'stopConsecutiveEpoch' : 100,
+'stopConsecutiveEpoch' : 20,
 'dataSetDir' : r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet16_16_16',
 'startingTime' : startingTime,
 'logDir' : 'E:\\NTNU1-2\\Nyx\\NyxDataSet\\wgan\\' + startingDate + '\\'

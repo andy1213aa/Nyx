@@ -21,7 +21,7 @@ def gradient_penality(dis, real_data, fake_data):
     x_img = _interpolate(real_data[1], fake_data)
     with tf.GradientTape() as tape:
         tape.watch(x_img)
-        pred_logit = dis(real_data[0][0], real_data[0][1], real_data[0][2], x_img)
+        pred_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], x_img])
         #pred_logit = dis([x_img])
     grad = tape.gradient(pred_logit, x_img)
     norm = tf.norm(tf.reshape(grad, [tf.shape(grad)[0], -1]), axis = 1)

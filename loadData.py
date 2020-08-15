@@ -29,7 +29,7 @@ def generateData(dataSetConfig):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
     data = tf.data.Dataset.zip((parameter123, data))
-    #data = data.shuffle(800)
+    data = data.shuffle(800, reshuffle_each_iteration=True)
     train_data = data.take(dataSetConfig['trainSize'])
     training = train_data.take(dataSetConfig['trainSize'])
 

@@ -21,7 +21,7 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.epoch = 1
     def save_model(self):
         if self.save_weights_only:
-            self.model.save_weights(self.dataSetConfig['logDir'])
+            self.model.save_weights(self.dataSetConfig['logDir'] + "trained_ckpt")
         else:
             self.model.save(self.dataSetConfig['logDir'])
     def save_config(self, monitor_value):
@@ -41,7 +41,7 @@ class SaveModel(tf.keras.callbacks.Callback):
     Training start: { self.dataSetConfig['startingTime']}
     Training stop: {datetime.datetime.now()}
     Training epoch: {self.epoch}
-    Root Mean Square Error: {monitor_value*100}%
+    Root Mean Square Error: {monitor_value}%
     =======================================================
     """
         with open( self.dataSetConfig['logDir']+'config.txt', 'w') as f:

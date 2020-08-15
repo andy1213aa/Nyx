@@ -35,7 +35,8 @@ class discriminator(tf.keras.Model):
         
         #model = keras.Model(inputs = [dataInput], outputs = d)
        # plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
-    def call(self, p1, p2, p3, inputs):
+    def call(self, inputs):
+        p1, p2, p3, data = inputs
         x = self.xD0(p1)
         x = self.xR0(x)
         x = self.xD1(x)
@@ -55,7 +56,7 @@ class discriminator(tf.keras.Model):
         xyz = self.concateD(xyz)
         xyz = self.concateR(xyz)
 
-        d = self.res0(inputs)
+        d = self.res0(data)
         d = self.res1(d)
         d = self.resR(d)
        

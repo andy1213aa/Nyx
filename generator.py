@@ -43,8 +43,8 @@ class generator(tf.keras.Model):
         
         #g = layers.Activation(tf.nn.tanh)(g)
         #plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
-    def call(self, p1, p2, p3):
-
+    def call(self, inputs):
+        p1, p2, p3 = inputs
         x = self.xD0(p1)
         x = self.xR0(x)
         x = self.xD1(x)

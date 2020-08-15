@@ -46,10 +46,10 @@ def main():
         print('SIDE EFFECT')
         with tf.GradientTape() as tape:
             
-            fake_data_by_random_parameter = gen(random_vector1, random_vector2, random_vector3,training = True)  #generate by random parameter
-            fake_data_by_real_parameter = gen(real_data[0][0], real_data[0][1], real_data[0][2],training = True) #generate by real parameter
+            fake_data_by_random_parameter = gen([random_vector1, random_vector2, random_vector3],training = True)  #generate by random parameter
+            fake_data_by_real_parameter = gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
 
-            fake_logit = dis(random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter, training = False)
+            fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
             #fake_logit = self.dis([fake_data_by_random_parameter], training = False)
             fake_loss, l2_norm = generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
             gLoss = fake_loss+L2_coefficient*l2_norm
@@ -62,10 +62,10 @@ def main():
         print('SIDE EFFECT')
         with tf.GradientTape() as t:
         
-            fake_data = gen(random_vector1, random_vector2, random_vector3,training = True)
-            real_logit = dis(real_data[0][0], real_data[0][1], real_data[0][2], real_data[1], training = True)
+            fake_data = gen([random_vector1, random_vector2, random_vector3],training = True)
+            real_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]], training = True)
             #real_logit = self.dis([real_data[1]] , training = True)
-            fake_logit = dis(random_vector1, random_vector2, random_vector3, fake_data, training = True)
+            fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             #fake_logit = self.dis([fake_data], training = True)
             real_loss, fake_loss = discriminator_loss(real_logit, fake_logit)
             gp_loss = gradient_penality(partial(dis, training = True), real_data, fake_data)
@@ -96,33 +96,33 @@ def main():
     # tf.summary.trace_on(graph=True, profiler=True)
     saveModel = SaveModel(gen,dataSetConfig, mode = 'min', save_weights_only=True)   #建立一個訓練規則
 
-    data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
-    data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
-    dataRange = data_max - data_min
+    # data_max = tf.reduce_max(list(training_batch.as_numpy_iterator())[0][1])
+    # data_min = tf.reduce_min(list(training_batch.as_numpy_iterator())[0][1])
+    # dataRange = data_max - data_min
     while saveModel.training:
-        for _, real_data in enumerate(training_batch):
+        for step, real_data in enumerate(training_batch):
             # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
             random_vector1 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.12, maxval=0.16)
             random_vector2 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.021, maxval=0.024)
             random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
             d_loss, gp = train_discriminator(real_data, random_vector1, random_vector2, random_vector3)
             g_loss= train_generator(real_data, random_vector1, random_vector2, random_vector3)
-        predi_data = gen(real_data[0][0], real_data[0][1], real_data[0][2])      
-    
-        RMSE =  tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange
-    
-        l2 = tf.norm(tensor = real_data[1]-predi_data)
-            
-        with summary_writer.as_default():
-                #hp.hparams(hparams)
-            tf.summary.scalar('RMSE', RMSE, saveModel.epoch)
-            tf.summary.scalar('discriminator_loss', d_loss, saveModel.epoch)
-            tf.summary.scalar('generator_loss', g_loss, saveModel.epoch)
-            tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
+            predi_data = gen([real_data[0][0], real_data[0][1], real_data[0][2]])      
+            dataRange = tf.reduce_max(real_data[1]) - tf.reduce_min(real_data[1])
+            RMSE_percentage =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange)*100
+            with summary_writer.as_default():
+                    #hp.hparams(hparams)
+                tf.summary.scalar('RMSE-percentage', RMSE_percentage, step)
+                # tf.summary.scalar('discriminator_loss', d_loss, saveModel.epoch)
+                # tf.summary.scalar('generator_loss', g_loss, saveModel.epoch)
+                # tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
 
-        print(f'Epoch: {saveModel.epoch:6} G Loss: {g_loss:15.2f} D loss: {d_loss:15.2f} GP Loss {gp:15.2f} L2: {l2:10f} RMSE: {RMSE* 100 :3.5f}% ')
-        saveModel.on_epoch_end(RMSE)
-        if saveModel.epoch%1000 == 0:
+            print(f'Epoch: {saveModel.epoch:6} Step: {step:3} RMSE: {RMSE_percentage :3.5f}% ')    
+        #l2 = tf.norm(tensor = real_data[1]-predi_data)
+            
+
+        saveModel.on_epoch_end(RMSE_percentage)
+        if saveModel.epoch%20 == 0:
             saveModel.save_model()
             
       
