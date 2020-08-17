@@ -1,10 +1,12 @@
 import tensorflow as tf
 import numpy as np
 import datetime
+import os
 class SaveModel(tf.keras.callbacks.Callback):
-    def __init__(self, model, dataSetConfig, mode = 'min', save_weights_only = True):
+    def __init__(self, gen, dis, dataSetConfig, mode = 'min', save_weights_only = True):
         super(SaveModel, self).__init__()
-        self.model = model
+        self.gen = gen
+        self.dis = dis
         # setting directory of saving weight
         self.dataSetConfig = dataSetConfig
 
@@ -19,11 +21,20 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.counter = 0
         self.training = True
         self.epoch = 1
+        self.genDir = dataSetConfig['logDir'] + "\\gen\\"
+        self.disDir = dataSetConfig['logDir'] + "\\dis\\"
+        if not os.path.isdir(dataSetConfig['logDir'] + "\\gen\\"):
+            os.mkdir(dataSetConfig['logDir'] + "\\gen\\")
+        if not os.path.isdir(dataSetConfig['logDir'] + "\\dis\\"):
+            os.mkdir(dataSetConfig['logDir'] + "\\dis\\")       
+
     def save_model(self):
         if self.save_weights_only:
-            self.model.save_weights(self.dataSetConfig['logDir'] + "trained_ckpt")
+            self.gen.save_weights(self.genDir + "trained_ckpt")
+            self.dis.save_weights(self.disDir + "trained_ckpt")
         else:
-            self.model.save(self.dataSetConfig['logDir'])
+            self.gen.save(self.genDir + "trained_ckpt")
+            self.dis.save(self.disDir + "trained_ckpt")
     def save_config(self, monitor_value):
         saveLogTxt = f"""
     Parameter Setting

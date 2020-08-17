@@ -15,7 +15,7 @@ class GAN():
         self.width = width
         self.height = height
 
-        self.filterNumber =32
+        self.filterNumber =16
         self.L2_coefficient =0.5#1/(length*width*height)
         self.dis = self.discriminator()
         #self.disOptimizer = keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
