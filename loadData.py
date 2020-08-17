@@ -29,13 +29,17 @@ def generateData(dataSetConfig):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
     data = tf.data.Dataset.zip((parameter123, data))
-    data = data.shuffle(800, reshuffle_each_iteration=True)
+    #data = data.shuffle(800, reshuffle_each_iteration=True)
     train_data = data.take(dataSetConfig['trainSize'])
     training = train_data.take(dataSetConfig['trainSize'])
-
+    #training = training.shuffle(dataSetConfig['trainSize'], reshuffle_each_iteration=True)
+    validating = train_data.skip(dataSetConfig['trainSize'] - dataSetConfig['validationSize'])
     test_data = data.skip(dataSetConfig['trainSize'])
     
+
     training_batch = training.batch(dataSetConfig['batchSize'], drop_remainder = True)
+    validating_batch = validating.batch(dataSetConfig['validationSize'], drop_remainder = True)
+    validating_batch = validating_batch.prefetch(buffer_size = AUTOTUNE)
     test_data_batch = test_data.batch(100, drop_remainder = True)
     training_batch = training_batch.prefetch(buffer_size = AUTOTUNE)
-    return training_batch, test_data_batch
+    return training_batch,validating_batch, test_data_batch

@@ -11,6 +11,7 @@ Nyx={
 'epochs' : 5000,
 'datasize' : 799,
 'trainSize' : 699,
+'validationSize': 59, 
 'testSize' : 100,
 'batchSize' : 64,
 'length' : 16,
@@ -19,7 +20,7 @@ Nyx={
 'dataType' : 'float',
 'numberOfParameter' : 3,
 'numberOfParameterDigit' : 7,
-'stopConsecutiveEpoch' : 20,
+'stopConsecutiveEpoch' : 500,
 'dataSetDir' : r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet16_16_16',
 'startingTime' : startingTime,
 'logDir' : 'E:\\NTNU1-2\\Nyx\\NyxDataSet\\wgan\\' + startingDate + '\\'
