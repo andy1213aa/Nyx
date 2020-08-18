@@ -40,13 +40,13 @@ class generator(tf.keras.Model):
 
         
         self.gD0 =layers.Dense(ch*2*4*4*4)
-        self.convT0 = layers.Conv3DTranspose(2*ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
-        self.gR0 = layers.LeakyReLU()
-        self.convT1 = layers.Conv3DTranspose(ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
-        self.gR1 = layers.LeakyReLU()
+        # self.convT0 = layers.Conv3DTranspose(2*ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
+        # self.gR0 = layers.LeakyReLU()
+        # self.convT1 = layers.Conv3DTranspose(ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
+        # self.gR1 = layers.LeakyReLU()
         # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
-        # self.gRes0 = ResBlock_generator(ch*2)
-        # self.gRes1 = ResBlock_generator(ch)
+        self.gRes0 = ResBlock_generator(ch*2)
+        self.gRes1 = ResBlock_generator(ch)
         #g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
         
 
@@ -82,12 +82,12 @@ class generator(tf.keras.Model):
         xyz = self.gD0(xyz)
         xyz = layers.Reshape((4, 4, 4, 2*self.ch))(xyz)
 
-        g = self.convT0(xyz)
-        g = self.gR0(g)
-        g = self.convT1(g)
-        g = self.gR1(g)
-        # g = self.gRes0(xyz)
-        # g = self.gRes1(g)
+        # g = self.convT0(xyz)
+        # g = self.gR0(g)
+        # g = self.convT1(g)
+        # g = self.gR1(g)
+        g = self.gRes0(xyz)
+        g = self.gRes1(g)
         # g = self.gR0(g)
         g = self.gConv0(g)
 
