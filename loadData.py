@@ -2,7 +2,7 @@ import config
 import numpy as np 
 import os
 import tensorflow as tf
-
+from shutil import copyfile
 def generateData(dataSetConfig):
     
     dataType = {'float': [4, tf.float32]}

@@ -88,11 +88,11 @@ def main():
     dis = discriminator()
     L2_coefficient =0.5#
     
-    disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0002, clipvalue = 1.0, decay = 1e-8)
-    #disOptimizer = tf.keras.optimizers.Adam(lr = 0.0004,beta_1=0.9, beta_2 = 0.999)
+    #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
+    disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
     
-    genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
-    #genOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999)                                            
+    #genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
+    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,)                                            
     gradient_penality_width = 10.0
 
     training_batch, validating_batch, testing_batch = generateData(dataSetConfig)
@@ -131,7 +131,7 @@ def main():
             
 
         saveModel.on_epoch_end(RMSE_percentage)
-        if saveModel.epoch%20 == 0:
+        if saveModel.epoch%100 == 0:
             saveModel.save_model()
             saveModel.save_config(RMSE_percentage)
       
