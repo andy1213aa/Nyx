@@ -7,6 +7,7 @@ from generator import generator
 from discriminator import discriminator
 from utlis import generator_loss, gradient_penality, discriminator_loss
 from functools import partial
+#import os
 # def main():
 #     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([512]))
 #     HP_BN_UNITS = hp.HParam('BatchNormalization', hp.Discrete([False]))
@@ -39,7 +40,13 @@ from functools import partial
         
 def main():
     
-   
+    #os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+    physical_devices = tf.config.list_physical_devices('GPU')
+    try:
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    except:
+        print('Invalid device or cannot modify virtual devices once initialized.')
+        return 0
     @tf.function
     def train_generator(real_data):
         print('SIDE EFFECT')
@@ -92,10 +99,10 @@ def main():
     disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
     
     #genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
-    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,)                                            
+    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)                                            
     gradient_penality_width = 10.0
 
-    training_batch, validating_batch, testing_batch = generateData(dataSetConfig)
+    training_batch, validating_batch = generateData(dataSetConfig)
     
     summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
     # tf.summary.trace_on(graph=True, profiler=True)
@@ -121,6 +128,8 @@ def main():
         predi_data = gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
         l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (data_max - data_min)
         RMSE_percentage =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min)) *100   
+        with summary_writer.as_default():
+            tf.summary.scalar('RMSE-percentage', RMSE_percentage, saveModel.epoch)
         #    dataRange = tf.reduce_max(real_data[1]) - tf.reduce_min(real_data[1])
         #RMSE_percentage =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange)*100
            # Average_percentage += RMSE_percentage
@@ -130,7 +139,7 @@ def main():
         print(f'Epoch: {saveModel.epoch:6} Step: {step:3} L2: {l2:3.3f} RMSE: {RMSE_percentage :3.5f}% ')    
             
 
-        saveModel.on_epoch_end(RMSE_percentage)
+        saveModel.on_epoch_end(l2)
         if saveModel.epoch%100 == 0:
             saveModel.save_model()
             saveModel.save_config(RMSE_percentage)

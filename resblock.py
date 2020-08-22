@@ -7,9 +7,9 @@ class ResBlock_generator(layers.Layer):
 
       
       #self.bn_0 = layers.BatchNormalization()
-      self.PRelu0 = layers.PReLU()
+      self.PRelu0 = layers.LeakyReLU()
       #self.upSample = layers.UpSampling3D()
-      self.conv_0 = layers.Conv3DTranspose(out_shape,kernel_size = ksize, strides=2,padding='same', name = 'rg_conv1')
+      self.conv_0 = layers.Conv3DTranspose(out_shape,kernel_size = ksize, strides=2,padding='same', name = 'rg_conv1',  use_bias=False)
       #self.bn_1 = layers.BatchNormalization()
       #self.PRelu1 = layers.PReLU()
       #self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size = ksize ,strides=1,padding='same', name = 'rg_conv2'))
@@ -17,7 +17,7 @@ class ResBlock_generator(layers.Layer):
 
       #shortcut
       #self.upSample_shortcut = layers.UpSampling3D()
-      self.conv_shortcut = layers.Conv3DTranspose(out_shape,kernel_size=1,strides=2, padding='same')
+      self.conv_shortcut = layers.Conv3DTranspose(out_shape,kernel_size=1,strides=2, padding='same', use_bias=False)
         
 
   def call(self, inputs, training=None):
@@ -41,14 +41,14 @@ class ResBlock_discriminator(layers.Layer):
   def __init__(self, out_shape, strides=1):
       super(ResBlock_discriminator, self).__init__()
 
-      self.conv_0 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=2,padding='same', name = 'rd_conv1'))
-      self.PRelu0 = layers.PReLU()
+      self.conv_0 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=2,padding='same', name = 'rd_conv1', use_bias=False))
+      self.PRelu0 = layers.LeakyReLU()
       #self.PRelu1 = layers.PReLU()
       #self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rd_conv2'))
       #self.average_pool1 = layers.AveragePooling3D()
 
       #shortcut
-      self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='same'))
+      self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='same', use_bias=False))
       #self.average_pool2 = layers.AveragePooling3D()
 
 
