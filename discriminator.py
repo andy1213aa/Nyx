@@ -44,8 +44,9 @@ class discriminator(tf.keras.Model):
         self.res1 = ResBlock_discriminator(ch*2)
         self.res2 = ResBlock_discriminator(ch*4)
         self.res3 = ResBlock_discriminator(ch*8)
-        # self.res4 = ResBlock_discriminator(ch*4)
-        # self.res5 = ResBlock_discriminator(ch*4)
+        self.res4 = ResBlock_discriminator(ch*8)
+        self.res5 = ResBlock_discriminator(ch*16)
+        self.res6 = ResBlock_discriminator(ch*16)
         self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=2, padding='same', use_bias=False))
         #self.GAV3D = layers.GlobalAveragePooling3D()
         
@@ -88,8 +89,9 @@ class discriminator(tf.keras.Model):
         d = self.res1(d)
         d = self.res2(d)
         d = self.res3(d)
-        # d = self.res4(d)
-        # d = self.res5(d)
+        d = self.res4(d)
+        d = self.res5(d)
+        d = self.res6(d)
         d = self.conv4(d)
         #d = self.resR(d)
 

@@ -17,7 +17,7 @@ class ResBlock_generator(layers.Layer):
 
       #shortcut
       #self.upSample_shortcut = layers.UpSampling3D()
-      self.conv_shortcut = layers.Conv3DTranspose(out_shape,kernel_size=1,strides=2, padding='same', use_bias=False)
+    #   self.conv_shortcut = layers.Conv3DTranspose(out_shape,kernel_size=1,strides=2, padding='same', use_bias=False)
         
 
   def call(self, inputs, training=None):
@@ -32,10 +32,10 @@ class ResBlock_generator(layers.Layer):
       
       
       #shortcut = self.upSample_shortcut(inputs)
-      shortcut = self.conv_shortcut(inputs)
-      outputs = layers.add([x,shortcut])
+    #   shortcut = self.conv_shortcut(inputs)
+    #   outputs = layers.add([x,shortcut])
 
-      return outputs
+      return x
 
 class ResBlock_discriminator(layers.Layer):
   def __init__(self, out_shape, strides=1):
@@ -48,7 +48,7 @@ class ResBlock_discriminator(layers.Layer):
       #self.average_pool1 = layers.AveragePooling3D()
 
       #shortcut
-      self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='same', use_bias=False))
+    #   self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='same', use_bias=False))
       #self.average_pool2 = layers.AveragePooling3D()
 
 
@@ -61,9 +61,9 @@ class ResBlock_discriminator(layers.Layer):
       #x = self.average_pool1(x)
       
 
-      shortcut = self.conv_shortcut(inputs)
-      #shortcut = self.average_pool2(shortcut)
-      outputs = layers.add([x,shortcut])
+    #   shortcut = self.conv_shortcut(inputs)
+    #   #shortcut = self.average_pool2(shortcut)
+    #   outputs = layers.add([x,shortcut])
       
-      return outputs
+      return x
 

@@ -126,8 +126,9 @@ def main():
                 tf.summary.scalar('generator_loss', g_loss, saveModel.epoch)
                 tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
         predi_data = gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
-        l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (data_max - data_min)
+        l2 = (tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/dataSetConfig['validationSize'])/  (data_max - data_min) *100
         RMSE_percentage =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min)) *100   
+        #RSquard = 1- tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1]-predi_data)**2)/ tf.math.reduce_variance(list(validating_batch.as_numpy_iterator())[0][1])
         with summary_writer.as_default():
             tf.summary.scalar('RMSE-percentage', RMSE_percentage, saveModel.epoch)
         #    dataRange = tf.reduce_max(real_data[1]) - tf.reduce_min(real_data[1])
@@ -136,12 +137,12 @@ def main():
         #Average_percentage /= (dataSetConfig['trainSize']//dataSetConfig['batchSize'])
         
         #l2 = tf.norm(tensor = real_data[1]-predi_data)
-        print(f'Epoch: {saveModel.epoch:6} Step: {step:3} L2: {l2:3.3f} RMSE: {RMSE_percentage :3.5f}% ')    
+        print(f'Epoch: {saveModel.epoch:6} Step: {step:3} L2: {l2:3.3f}% RMSE: {RMSE_percentage :3.5f}%') #RSquard: {RSquard : 1.5f}')    
             
 
         saveModel.on_epoch_end(l2)
-        if saveModel.epoch%100 == 0:
+        if saveModel.epoch%20 == 0:
             saveModel.save_model()
-            saveModel.save_config(RMSE_percentage)
+            saveModel.save_config(l2)
       
 main()
