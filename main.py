@@ -93,7 +93,7 @@ def main():
     #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
     gen = generator()
     dis = discriminator()
-    L2_coefficient =0.5#
+    L2_coefficient = dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height']
     
     #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
     disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
@@ -141,7 +141,7 @@ def main():
             
 
         saveModel.on_epoch_end(l2)
-        if saveModel.epoch%20 == 0:
+        if saveModel.epoch%1 == 0:
             saveModel.save_model()
             saveModel.save_config(l2)
       

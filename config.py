@@ -11,20 +11,19 @@ Nyx={
 'epochs' : 5000,
 'datasize' : 799,
 'trainSize' : 699,
-'validationSize': 59, 
+'validationSize':5, 
 'testSize' : 100,
-'batchSize' : 4,
-'length' : 256,
-'width' : 256,
-'height' : 256,
+'batchSize' :2,
+'length' : 128,
+'width' : 128,
+'height' : 128,
 'dataType' : 'float',
 'numberOfParameter' : 3,
 'numberOfParameterDigit' : 7,
 'stopConsecutiveEpoch' : 1000,
-'dataSetDir' : r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet256_256_256',
+'dataSetDir' : r'E:\NTNU1-2\Nyx\NyxDataSet\NyxDataSet128_128_128',
 'startingTime' : startingTime,
 'logDir' : 'E:\\NTNU1-2\\Nyx\\NyxDataSet\\wgan\\' + startingDate + '\\'
-
 }
 
 dataSet = {'Nyx':Nyx}

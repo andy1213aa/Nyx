@@ -5,7 +5,7 @@ from SpectralNormalization import SpectralNormalization
 
 #from IPython.display import Image
 class discriminator(tf.keras.Model):
-    def __init__(self, ch=16):
+    def __init__(self, ch= 16):
         super(discriminator, self).__init__()
 
         # self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
@@ -40,14 +40,14 @@ class discriminator(tf.keras.Model):
         # self.resR2 = layers.LeakyReLU()
         # self.conv3 = SpectralNormalization(layers.Conv3D(8*ch, kernel_size=3, strides=2, padding='same', use_bias=False))
         # self.resR3 = layers.LeakyReLU()
-        self.res0 = ResBlock_discriminator(ch)
-        self.res1 = ResBlock_discriminator(ch*2)
-        self.res2 = ResBlock_discriminator(ch*4)
-        self.res3 = ResBlock_discriminator(ch*8)
-        self.res4 = ResBlock_discriminator(ch*8)
-        self.res5 = ResBlock_discriminator(ch*16)
-        self.res6 = ResBlock_discriminator(ch*16)
-        self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=2, padding='same', use_bias=False))
+        self.res0 = ResBlock_discriminator(ch, ksize=3)
+        self.res1 = ResBlock_discriminator(ch*2, ksize=3)
+        self.res2 = ResBlock_discriminator(ch*4, ksize=3)
+        self.res3 = ResBlock_discriminator(ch*8, ksize=3)
+        self.res4 = ResBlock_discriminator(ch*8, ksize=3)
+        self.res5 = ResBlock_discriminator(ch*16, ksize=3)
+        self.res6 = ResBlock_discriminator(ch*16, ksize=3)
+        self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False))
         #self.GAV3D = layers.GlobalAveragePooling3D()
         
         #d = layers.Flatten()(d)
