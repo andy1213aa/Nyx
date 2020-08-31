@@ -8,8 +8,8 @@ class ResBlock_generator(layers.Layer):
       
       #self.bn_0 = layers.BatchNormalization()
       self.PRelu0 = layers.LeakyReLU()
-      #self.upSample = layers.UpSampling3D()
-      self.conv_0 = layers.Conv3DTranspose(out_shape,kernel_size = ksize, strides=2,padding='same', name = 'rg_conv1',  use_bias=False)
+      self.upSample = layers.UpSampling3D()
+      self.conv_0 = layers.Conv3D(out_shape,kernel_size = ksize, strides=1,padding='same', name = 'rg_conv1',  use_bias=False)
       #self.bn_1 = layers.BatchNormalization()
       #self.PRelu1 = layers.PReLU()
       #self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size = ksize ,strides=1,padding='same', name = 'rg_conv2'))
@@ -23,7 +23,8 @@ class ResBlock_generator(layers.Layer):
   def call(self, inputs, training=None):
 
       #x = self.bn_0(inputs)
-      x = self.conv_0(inputs)
+      x = self.upSample(inputs)
+      x = self.conv_0(x)
       x = self.PRelu0(x)
       #x = self.upSample(x)
       #x = self.bn_1(x)
@@ -41,11 +42,11 @@ class ResBlock_discriminator(layers.Layer):
   def __init__(self, out_shape, strides=1,ksize=3):
       super(ResBlock_discriminator, self).__init__()
 
-      self.conv_0 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=ksize,strides=2,padding='same', name = 'rd_conv1', use_bias=False))
+      self.conv_0 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=ksize,strides=2 ,padding='same', name = 'rd_conv1', use_bias=False))
       self.PRelu0 = layers.LeakyReLU()
       #self.PRelu1 = layers.PReLU()
       #self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=3,strides=1,padding='same', name = 'rd_conv2'))
-      #self.average_pool1 = layers.AveragePooling3D()
+      #self.average_pool0 = layers.AveragePooling3D()
 
       #shortcut
     #   self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='same', use_bias=False))
@@ -58,7 +59,7 @@ class ResBlock_discriminator(layers.Layer):
       x = self.PRelu0(x)
       #x = self.PRelu1(x)
       #x = self.conv_1(x)
-      #x = self.average_pool1(x)
+      #x = self.average_pool0(x)
       
 
     #   shortcut = self.conv_shortcut(inputs)

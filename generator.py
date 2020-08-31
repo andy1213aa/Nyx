@@ -4,7 +4,7 @@ from tensorflow.keras import layers
 from SpectralNormalization import SpectralNormalization
 #from IPython.display import Image
 class generator(tf.keras.Model):
-    def __init__(self, ch= 16):
+    def __init__(self, ch= 4):
         super(generator, self).__init__()
         self.ch = ch
         self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
@@ -55,11 +55,13 @@ class generator(tf.keras.Model):
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
-        self.gConv0 = layers.Conv3DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False)
+        self.gConv0 = layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False)
         
         #g = layers.Activation(tf.nn.tanh)(g)
         #plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
+    
     def call(self, inputs):
+
         p1, p2, p3 = inputs
         x = self.xD0(p1)
         x = self.xR0(x)

@@ -41,12 +41,12 @@ from functools import partial
 def main():
     
     #os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
-    physical_devices = tf.config.list_physical_devices('GPU')
-    try:
-        tf.config.experimental.set_memory_growth(physical_devices[0], True)
-    except:
-        print('Invalid device or cannot modify virtual devices once initialized.')
-        return 0
+    # physical_devices = tf.config.list_physical_devices('GPU')
+    # try:
+    #     tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    # except:
+    #     print('Invalid device or cannot modify virtual devices once initialized.')
+    #     return 0
     @tf.function
     def train_generator(real_data):
         print('SIDE EFFECT')
@@ -93,7 +93,7 @@ def main():
     #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
     gen = generator()
     dis = discriminator()
-    L2_coefficient = dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height']
+    L2_coefficient =10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
     
     #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
     disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
