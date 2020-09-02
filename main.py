@@ -7,6 +7,8 @@ from generator import generator
 from discriminator import discriminator
 from utlis import generator_loss, gradient_penality, discriminator_loss
 from functools import partial
+import numpy as np
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
 #import os
 # def main():
 #     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([512]))
@@ -39,7 +41,7 @@ from functools import partial
 
         
 def main():
-    
+    mixed_predcision = False
     #os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
     # physical_devices = tf.config.list_physical_devices('GPU')
     # try:
@@ -47,6 +49,33 @@ def main():
     # except:
     #     print('Invalid device or cannot modify virtual devices once initialized.')
     #     return 0
+    
+    
+    
+    dataSetConfig = config.dataSet['Nyx'] #What data you want to load
+    #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
+    gen = generator()
+    dis = discriminator()
+    L2_coefficient =10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
+    
+    #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
+    disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,   decay = 1e-8)
+    #genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
+    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,   decay = 1e-8)                                            
+    gradient_penality_width = 10.0
+
+    if mixed_precision:
+        policy = mixed_precision.Policy('mixed_float16')
+        mixed_precision.set_policy(policy)
+        genOptimizer = mixed_precision.LossScaleOptimizer(genOptimizer, loss_scale='dynamic')
+        disOptimizer = mixed_precision.LossScaleOptimizer(disOptimizer, loss_scale='dynamic')
+
+    training_batch, validating_batch = generateData(dataSetConfig)
+    
+    summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
+    # tf.summary.trace_on(graph=True, profiler=True)
+    saveModel = SaveModel(gen,dis, dataSetConfig, mode = 'min', save_weights_only=True)   #建立一個訓練規則
+    datarange = np.zeros((dataSetConfig['validationSize']))
     @tf.function
     def train_generator(real_data):
         print('SIDE EFFECT')
@@ -61,8 +90,12 @@ def main():
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
             fake_logit = dis(fake_data_by_random_parameter, training = False)
             fake_loss, l2_norm = generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
-            gLoss = fake_loss+L2_coefficient*l2_norm
+            gLoss = fake_loss#+L2_coefficient*l2_norm
+            if mixed_precision:
+                gLoss = genOptimizer.get_scaled_loss(gLoss)
         gradients = tape.gradient(gLoss, gen.trainable_variables)
+        if mixed_precision:
+            gradients = genOptimizer.get_unscaled_gradients(gradients)
         genOptimizer.apply_gradients(zip(gradients, gen.trainable_variables))
         return gLoss
 
@@ -80,43 +113,26 @@ def main():
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             fake_logit = dis(fake_data, training = True)
             real_loss, fake_loss = discriminator_loss(real_logit, fake_logit)
-            gp_loss = gradient_penality(partial(dis, training = True), real_data, fake_data)
-            dLoss = (real_loss + fake_loss) + gp_loss*gradient_penality_width
-
+            #gp_loss = gradient_penality(partial(dis, training = True), real_data, fake_data)
+            dLoss = (real_loss + fake_loss) #+ gp_loss*gradient_penality_width
+            if mixed_precision:
+                dLoss = disOptimizer.get_scaled_loss(dLoss)
         D_grad = t.gradient(dLoss, dis.trainable_variables)
+        if mixed_precision:
+            D_grad = disOptimizer.get_unscaled_gradients(D_grad)
         disOptimizer.apply_gradients(zip(D_grad, dis.trainable_variables))
-        return real_loss + fake_loss, gp_loss
-    
-    
-    
-    dataSetConfig = config.dataSet['Nyx'] #What data you want to load
-    #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
-    gen = generator()
-    dis = discriminator()
-    L2_coefficient =10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
-    
-    #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
-    disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
-    
-    #genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
-    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)                                            
-    gradient_penality_width = 10.0
-
-    training_batch, validating_batch = generateData(dataSetConfig)
-    
-    summary_writer = tf.summary.create_file_writer(dataSetConfig['logDir'])
-    # tf.summary.trace_on(graph=True, profiler=True)
-    saveModel = SaveModel(gen,dis, dataSetConfig, mode = 'min', save_weights_only=True)   #建立一個訓練規則
-
-    data_max = tf.reduce_max(list(validating_batch.as_numpy_iterator())[0][1])
-    data_min = tf.reduce_min(list(validating_batch.as_numpy_iterator())[0][1])
+        return dLoss#, gp_loss
+    for i in range(dataSetConfig['validationSize']):
+        datarange[i] = np.max(list(validating_batch.as_numpy_iterator())[0][1][i]) - np.min(list(validating_batch.as_numpy_iterator())[0][1][i])
+    # data_max = tf.reduce_max(list(validating_batch.as_numpy_iterator())[0][1])
+    # data_min = tf.reduce_min(list(validating_batch.as_numpy_iterator())[0][1])
     # dataRange = data_max - data_min
     while saveModel.training:
         Average_percentage = 0
         for step, real_data in enumerate(training_batch):
             # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
             
-            d_loss, gp = train_discriminator(real_data)
+            d_loss = train_discriminator(real_data)
             g_loss= train_generator(real_data)
             #l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (data_max - data_min)      
             with summary_writer.as_default():
@@ -124,10 +140,13 @@ def main():
                 #tf.summary.scalar('RMSE-percentage', l2, step)
                 tf.summary.scalar('discriminator_loss', d_loss, saveModel.epoch)
                 tf.summary.scalar('generator_loss', g_loss, saveModel.epoch)
-                tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
+               # tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
+            print(f'Epoch: {saveModel.epoch:6} Step: {step:3} dloss: {d_loss} gloss: {g_loss}') #RSquard: {RSquard : 1.5f}')    
         predi_data = gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
-        l2 = (tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/dataSetConfig['validationSize'])/  (data_max - data_min) *100
-        RMSE_percentage =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min)) *100   
+        #l2 = (tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/dataSetConfig['validationSize'])/  (data_max - data_min) *100
+        l2 = tf.reduce_mean(tf.math.sqrt(tf.reduce_sum(((list(validating_batch.as_numpy_iterator())[0][1]-predi_data)**2), axis = (1, 2, 3)))/ datarange) * 100
+        RMSE_percentage = np.mean(np.sqrt(np.mean(((list(validating_batch.as_numpy_iterator())[0][1]-predi_data))**2, axis = (1, 2, 3))) / datarange) * 100
+        #RMSE_percentage =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min)) *100   
         #RSquard = 1- tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1]-predi_data)**2)/ tf.math.reduce_variance(list(validating_batch.as_numpy_iterator())[0][1])
         with summary_writer.as_default():
             tf.summary.scalar('RMSE-percentage', RMSE_percentage, saveModel.epoch)
@@ -137,7 +156,7 @@ def main():
         #Average_percentage /= (dataSetConfig['trainSize']//dataSetConfig['batchSize'])
         
         #l2 = tf.norm(tensor = real_data[1]-predi_data)
-        print(f'Epoch: {saveModel.epoch:6} Step: {step:3} L2: {l2:3.3f}% RMSE: {RMSE_percentage :3.5f}%') #RSquard: {RSquard : 1.5f}')    
+        print(f'Epoch: {saveModel.epoch:6} Step: {step:3} L2: {l2:3.3f}% RMSE: {RMSE_percentage :3.5f}% dloss: {d_loss} gloss: {g_loss}') #RSquard: {RSquard : 1.5f}')    
             
 
         saveModel.on_epoch_end(l2)

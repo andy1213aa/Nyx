@@ -1,13 +1,13 @@
 from resblock import ResBlock_discriminator
 import tensorflow as tf
-from tensorflow.keras import layers
+from tensorflow.keras import layers, initializers
 from SpectralNormalization import SpectralNormalization
 
 #from IPython.display import Image
 class discriminator(tf.keras.Model):
-    def __init__(self, ch= 4):
+    def __init__(self, ch= 16):
         super(discriminator, self).__init__()
-
+        
         # self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
         # self.xR0 = layers.LeakyReLU()
         # self.xD1 = layers.Dense(512, name = 'parameter1_layer_2')
@@ -33,7 +33,7 @@ class discriminator(tf.keras.Model):
         # self.concateR = layers.LeakyReLU()
 
         # self.conv0 = SpectralNormalization(layers.Conv3D(ch, kernel_size=3, strides=2, padding='same', use_bias=False))
-        # self.resR0 = layers.LeakyReLU()
+        self.resR0 = layers.LeakyReLU()
         # self.conv1 = SpectralNormalization(layers.Conv3D(2*ch, kernel_size=3, strides=2, padding='same', use_bias=False))
         # self.resR1 = layers.LeakyReLU()
         # self.conv2 = SpectralNormalization(layers.Conv3D(4*ch, kernel_size=3, strides=2, padding='same', use_bias=False))
@@ -44,12 +44,12 @@ class discriminator(tf.keras.Model):
         self.res1 = ResBlock_discriminator(ch*2, ksize=3)
         self.res2 = ResBlock_discriminator(ch*4, ksize=3)
         self.res3 = ResBlock_discriminator(ch*8, ksize=3)
-        self.res4 = ResBlock_discriminator(ch*8, ksize=3)
+       # self.res4 = ResBlock_discriminator(ch*8, ksize=3)
         #self.res5 = ResBlock_discriminator(ch*16, ksize=3)
         #self.res6 = ResBlock_discriminator(ch*16, ksize=3)
         #self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False))
         #self.GAV3D = layers.GlobalAveragePooling3D()
-        self.out = layers.Dense(1)
+        self.out = layers.Dense(1, kernel_initializer=initializers.he_normal(), dtype='float32')
         
         #self.outputD = layers.Dense(1)
         
@@ -76,7 +76,6 @@ class discriminator(tf.keras.Model):
         # xyz = self.concateD(xyz)
         # xyz = self.concateR(xyz)
         # d = self.conv0(inputs)
-        # d = self.resR0(d)
         # d = self.conv1(d)
         # d = self.resR1(d)
         # d = self.conv2(d)
@@ -89,11 +88,12 @@ class discriminator(tf.keras.Model):
         d = self.res1(d)
         d = self.res2(d)
         d = self.res3(d)
-        d = self.res4(d)
+        #d = self.res4(d)
         #d = self.res5(d)
         #d = self.res6(d)
         #d = self.conv4(d)
         #d = self.resR(d)
+        d = self.resR0(d)
         #d = layers.Flatten()(d)
 
         #d = self.GAV3D(d) * (4*4*4)

@@ -22,6 +22,7 @@ def generateData(dataSetConfig):
     def process_input_data(ds):
         ds = tf.io.decode_raw(ds, dataType[dataSetConfig['dataType']][1])
         ds = tf.reshape(ds, [dataSetConfig['width'], dataSetConfig['length'], dataSetConfig['height'], 1]) 
+        #tf.dtypes.cast(ds, tf.float16)
         #mean = tf.reduce_mean(ds)
         #std = tf.math.reduce_std(ds)      
         return ds#(ds-mean)/std
@@ -32,7 +33,7 @@ def generateData(dataSetConfig):
     #data = data.shuffle(800, reshuffle_each_iteration=True)
     train_data = data.take(dataSetConfig['trainSize'])
     training = train_data.take(dataSetConfig['trainSize'])
-    #training = training.shuffle(dataSetConfig['trainSize'], reshuffle_each_iteration=True)
+    training = training.shuffle(dataSetConfig['trainSize'], reshuffle_each_iteration=True)
     validating = train_data.skip(dataSetConfig['trainSize'] - dataSetConfig['validationSize'])
     #test_data = data.skip(dataSetConfig['trainSize'])
     
