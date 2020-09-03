@@ -7,7 +7,7 @@ from SpectralNormalization import SpectralNormalization
 class discriminator(tf.keras.Model):
     def __init__(self, ch= 16):
         super(discriminator, self).__init__()
-        
+
         # self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
         # self.xR0 = layers.LeakyReLU()
         # self.xD1 = layers.Dense(512, name = 'parameter1_layer_2')
@@ -44,12 +44,12 @@ class discriminator(tf.keras.Model):
         self.res1 = ResBlock_discriminator(ch*2, ksize=3)
         self.res2 = ResBlock_discriminator(ch*4, ksize=3)
         self.res3 = ResBlock_discriminator(ch*8, ksize=3)
-       # self.res4 = ResBlock_discriminator(ch*8, ksize=3)
-        #self.res5 = ResBlock_discriminator(ch*16, ksize=3)
+        self.res4 = ResBlock_discriminator(ch*8, ksize=3)
+        self.res5 = ResBlock_discriminator(ch*16, ksize=3)
         #self.res6 = ResBlock_discriminator(ch*16, ksize=3)
         #self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False))
         #self.GAV3D = layers.GlobalAveragePooling3D()
-        self.out = layers.Dense(1, kernel_initializer=initializers.he_normal(), dtype='float32')
+        #self.out = layers.Dense(1, kernel_initializer=initializers.he_normal())
         
         #self.outputD = layers.Dense(1)
         
@@ -88,17 +88,17 @@ class discriminator(tf.keras.Model):
         d = self.res1(d)
         d = self.res2(d)
         d = self.res3(d)
-        #d = self.res4(d)
-        #d = self.res5(d)
+        d = self.res4(d)
+        d = self.res5(d)
         #d = self.res6(d)
         #d = self.conv4(d)
         #d = self.resR(d)
-        d = self.resR0(d)
+        #d = self.resR0(d)
         #d = layers.Flatten()(d)
 
         #d = self.GAV3D(d) * (4*4*4)
         #d = tf.nn.avg_pool(input = d, ksize= [1, 4, 4, 4,  1] , strides=[1, 1, 1, 1,  1], padding='VALID') * (4*4*4)
-        d = self.out(d)
+        #d = self.out(d)
         # d = tf.math.reduce_sum(d)
         #d = layers.Flatten()(d)
         # f1 = layers.Multiply()([d, xyz])

@@ -22,7 +22,6 @@ def generateData(dataSetConfig):
     def process_input_data(ds):
         ds = tf.io.decode_raw(ds, dataType[dataSetConfig['dataType']][1])
         ds = tf.reshape(ds, [dataSetConfig['width'], dataSetConfig['length'], dataSetConfig['height'], 1]) 
-        #tf.dtypes.cast(ds, tf.float16)
         #mean = tf.reduce_mean(ds)
         #std = tf.math.reduce_std(ds)      
         return ds#(ds-mean)/std
