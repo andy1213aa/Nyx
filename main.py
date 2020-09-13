@@ -61,7 +61,7 @@ def main():
             fake_data_by_real_parameter = gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
 
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
-            fake_logit = dis(fake_data_by_random_parameter, training = False)
+            fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
             fake_loss, l2_norm = generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
             gLoss = fake_loss+L2_coefficient*l2_norm
         gradients = tape.gradient(gLoss, gen.trainable_variables)
@@ -77,13 +77,13 @@ def main():
             random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
 
             fake_data = gen([random_vector1, random_vector2, random_vector3],training = True)
-            #real_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]], training = True)
-            real_logit = dis(real_data[1] , training = True)
+            real_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]], training = True)
+            # real_logit = dis(real_data[1] , training = True)
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
-            fake_logit = dis(fake_data, training = True)
+            fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             real_loss, fake_loss = discriminator_loss(real_logit, fake_logit)
             gp_loss = gradient_penality(partial(dis, training = True), real_data, fake_data)
-            dLoss = (real_loss + fake_loss) + gp_loss*gradient_penality_width
+            dLoss = (real_loss + fake_loss)# + gp_loss*gradient_penality_width
 
         D_grad = t.gradient(dLoss, dis.trainable_variables)
         disOptimizer.apply_gradients(zip(D_grad, dis.trainable_variables))
@@ -101,10 +101,10 @@ def main():
     L2_coefficient = 10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
     
     #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
-    disOptimizer = tf.keras.optimizers.Adam(lr = 0.001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
+    disOptimizer = tf.keras.optimizers.Adam(lr = 0.0002,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
     
     #genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
-    genOptimizer = tf.keras.optimizers.Adam(lr = 0.0005,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)                                            
+    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)                                            
     gradient_penality_width = 10.0
 
     training_batch, validating_batch = generateData(dataSetConfig)
