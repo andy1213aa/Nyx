@@ -22,16 +22,16 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.counter = 0
         self.training = True
         self.epoch = 1
-        self.genDir = dataSetConfig['logDir'] + "gen\\"
-        self.disDir = dataSetConfig['logDir'] + "dis\\"
+        self.genDir = dataSetConfig['logDir'] + "gen/"
+        self.disDir = dataSetConfig['logDir'] + "dis/"
         copyfile('generator.py', dataSetConfig['logDir'] + "generator.py")
         copyfile('resblock.py', dataSetConfig['logDir'] + "resblock.py")
         copyfile('discriminator.py', dataSetConfig['logDir'] + "discriminator.py")
         copyfile('SpectralNormalization.py', dataSetConfig['logDir'] + "SpectralNormalization.py")
-        if not os.path.isdir(dataSetConfig['logDir'] + "gen\\"):
-            os.mkdir(dataSetConfig['logDir'] + "gen\\")
-        if not os.path.isdir(dataSetConfig['logDir'] + "dis\\"):
-            os.mkdir(dataSetConfig['logDir'] + "dis\\")       
+        if not os.path.isdir(dataSetConfig['logDir'] + "gen/"):
+            os.mkdir(dataSetConfig['logDir'] + "gen/")
+        if not os.path.isdir(dataSetConfig['logDir'] + "dis/"):
+            os.mkdir(dataSetConfig['logDir'] + "dis/")       
             
           
     def save_model(self):

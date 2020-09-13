@@ -51,7 +51,7 @@ def main():
     #     return 0
     @tf.function
     def train_generator(real_data):
-        print('SIDE EFFECT')
+        print('GEN GRAPH SIDE EFFECT')
         with tf.GradientTape() as tape:
             random_vector1 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.12, maxval=0.16)
             random_vector2 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.021, maxval=0.024)
@@ -66,11 +66,11 @@ def main():
             gLoss = fake_loss+L2_coefficient*l2_norm
         gradients = tape.gradient(gLoss, gen.trainable_variables)
         genOptimizer.apply_gradients(zip(gradients, gen.trainable_variables))
-        return gLoss
+        return fake_loss, l2_norm
 
     @tf.function
     def train_discriminator(real_data):
-        print('SIDE EFFECT')
+        print('DIS GRAPH SIDE EFFECT')
         with tf.GradientTape() as t:
             random_vector1 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.12, maxval=0.16)
             random_vector2 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.021, maxval=0.024)
@@ -87,21 +87,24 @@ def main():
 
         D_grad = t.gradient(dLoss, dis.trainable_variables)
         disOptimizer.apply_gradients(zip(D_grad, dis.trainable_variables))
-        return real_loss + fake_loss, gp_loss
+        return real_loss , fake_loss, gp_loss
     
     
     
     dataSetConfig = config.dataSet['Nyx'] #What data you want to load
     #model = GAN(length = dataSetConfig['length'], width = dataSetConfig['width'], height = dataSetConfig['height'])
     gen = generator()
+
     dis = discriminator()
-    L2_coefficient =10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
+
+
+    L2_coefficient = 10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
     
     #disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
-    disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
+    disOptimizer = tf.keras.optimizers.Adam(lr = 0.001,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
     
     #genOptimizer = tf.keras.optimizers.RMSprop(lr = 0.00005, clipvalue = 1.0, decay = 1e-8)
-    genOptimizer = tf.keras.optimizers.Adam(lr = 0.00005,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)                                            
+    genOptimizer = tf.keras.optimizers.Adam(lr = 0.0005,beta_1=0.9, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)                                            
     gradient_penality_width = 10.0
 
     training_batch, validating_batch = generateData(dataSetConfig)
@@ -120,16 +123,19 @@ def main():
         for step, real_data in enumerate(training_batch):
             # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
             
-            d_loss, gp = train_discriminator(real_data)
-            g_loss= train_generator(real_data)
+            dRealLoss, dFakeLoss, gp = train_discriminator(real_data)
+            gFakeLoss, gL2Loss= train_generator(real_data)
             #l2 = tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/ (data_max - data_min)      
             with summary_writer.as_default():
                     #hp.hparams(hparams)
                 #tf.summary.scalar('RMSE-percentage', l2, step)
-                tf.summary.scalar('discriminator_loss', d_loss, saveModel.epoch)
-                tf.summary.scalar('generator_loss', g_loss, saveModel.epoch)
+                tf.summary.scalar('discriminator_Real_loss', dRealLoss, saveModel.epoch)
+                tf.summary.scalar('discriminator_Fake_loss', dFakeLoss, saveModel.epoch)
+                tf.summary.scalar('generator_Fake_Loss', gFakeLoss, saveModel.epoch)
+                tf.summary.scalar('generator_L2_Loss', gL2Loss, saveModel.epoch)
                 tf.summary.scalar('gradient_penalty', gp, saveModel.epoch)
-            #print(f'Epoch: {saveModel.epoch:6} Step: {step:3} dLoss: {d_loss} gLoss: {g_loss} ')    
+
+           # print(f'Epoch: {saveModel.epoch:6} Step: {step:3} dLoss: {d_loss} gLoss: {g_loss} ')    
         predi_data = gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
         #l2 = (tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/dataSetConfig['validationSize'])/  (data_max - data_min) *100
         l2 = tf.reduce_mean(tf.math.sqrt(tf.reduce_sum(((list(validating_batch.as_numpy_iterator())[0][1]-predi_data)**2), axis = (1, 2, 3)))/ datarange) * 100
@@ -148,8 +154,10 @@ def main():
             
 
         saveModel.on_epoch_end(l2)
-        if saveModel.epoch%1 == 0:
+        if saveModel.epoch%20 == 0:
             saveModel.save_model()
-            saveModel.save_config(l2)
-      
+            saveModel.save_config(RMSE_percentage)
+        if saveModel.epoch%100 ==0:
+            for i in range(predi_data.shape[0]):
+                predi_data[i].numpy().tofile(dataSetConfig["logDir"] + f'Nyx{dataSetConfig["width"]}Predict-{i}.bin')
 main()
