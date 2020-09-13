@@ -5,7 +5,7 @@ from SpectralNormalization import SpectralNormalization
 #from IPython.display import Image
 
 class generator(tf.keras.Model):
-    def __init__(self, ch= 64):
+    def __init__(self, ch= 8):
         super(generator, self).__init__()
         self.ch = ch
         self.xD0 = layers.Dense(512, name = 'parameter1_layer_1', kernel_initializer=initializers.he_normal())
@@ -40,23 +40,23 @@ class generator(tf.keras.Model):
         self.zR2 = layers.LeakyReLU()
 
         
-        self.gD0 =layers.Dense(ch*2*4*4*4, kernel_initializer=initializers.he_normal())
+        self.gD0 =layers.Dense(ch*8*4*4*4, kernel_initializer=initializers.he_normal())
         # self.convT0 = layers.Conv3DTranspose(2*ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
         # self.convT1 = layers.Conv3DTranspose(ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
         # self.gR1 = layers.LeakyReLU()
         # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
         #self.gRes0 = ResBlock_generator(16*ch)
-        #self.gRes1 = ResBlock_generator(8*ch, ksize=3)
-        #self.gRes2 = ResBlock_generator(8*ch, ksize=3)
-        #self.gRes3 = ResBlock_generator(4*ch, ksize=3)
+       # self.gRes1 = ResBlock_generator(8*ch, ksize=3)
+        self.gRes2 = ResBlock_generator(8*ch, ksize=3)
+        self.gRes3 = ResBlock_generator(4*ch, ksize=3)
         self.gRes4 = ResBlock_generator(2*ch, ksize=3)
         #self.gR0 = layers.LeakyReLU()
-        self.gRes5 = ResBlock_generator(ch, ksize=5)
+        self.gRes5 = ResBlock_generator(ch, ksize=3)
         #g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
-        self.gConv0 = layers.Conv3D(1, kernel_size=5, strides=1, padding='same', use_bias=False, kernel_initializer=initializers.he_normal())
+        self.gConv0 = layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False, kernel_initializer=initializers.he_normal())
         
         #g = layers.Activation(tf.nn.tanh)(g)
         #plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
@@ -87,18 +87,18 @@ class generator(tf.keras.Model):
 
         xyz = layers.concatenate([x, y, z])
         xyz = self.gD0(xyz)
-        xyz = layers.Reshape((4, 4, 4, 2*self.ch))(xyz)
+        xyz = layers.Reshape((4, 4, 4, 8*self.ch))(xyz)
 
         # g = self.convT0(xyz)
         # g = self.gR0(g)
         # g = self.convT1(g)
         # g = self.gR1(g)
         #g = self.gRes0(xyz)
-        g = self.gRes5(xyz)
-        g = self.gRes4(g)
-        #g = self.gRes3(g)
-        #g = self.gRes2(g)
         #g = self.gRes1(xyz)
+        g = self.gRes2(xyz)
+        g = self.gRes3(g)
+        g = self.gRes4(g)
+        g = self.gRes5(g)
         #g = self.gR0(g)
         g = self.gConv0(g)
 

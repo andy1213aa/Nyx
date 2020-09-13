@@ -9,7 +9,7 @@ class ResBlock_generator(layers.Layer):
       #self.bn_0 = layers.BatchNormalization()
       self.PRelu0 = layers.LeakyReLU()
       self.upSample = layers.UpSampling3D()
-      self.conv_0 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size = ksize, strides=1,padding='same', name = 'rg_conv1',  use_bias=False, kernel_initializer=initializers.he_normal()))
+      self.conv_0 = layers.Conv3D(out_shape,kernel_size = ksize, strides=1,padding='same', name = 'rg_conv1',  use_bias=False, kernel_initializer=initializers.he_normal())
       #self.bn_1 = layers.BatchNormalization()
       #self.PRelu1 = layers.PReLU()
       #self.conv_1 = layers.Conv3D(out_shape,kernel_size = ksize ,strides=1,padding='same', name = 'rg_conv2',  use_bias=False, kernel_initializer=initializers.he_normal())
@@ -17,7 +17,7 @@ class ResBlock_generator(layers.Layer):
 
       #shortcut
       self.upSample_shortcut = layers.UpSampling3D()
-      self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=1,strides=1, padding='same', use_bias=False))
+      self.conv_shortcut = layers.Conv3D(out_shape,kernel_size=1,strides=1, padding='same', use_bias=False)
         
 
   def call(self, inputs, training=None):

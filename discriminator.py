@@ -5,31 +5,31 @@ from SpectralNormalization import SpectralNormalization
 
 #from IPython.display import Image
 class discriminator(tf.keras.Model):
-    def __init__(self, ch= 64):
+    def __init__(self, ch= 8):
         super(discriminator, self).__init__()
 
-        self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
+        self.xD0 = SpectralNormalization(layers.Dense(512, name = 'parameter1_layer_1'))
         self.xR0 = layers.LeakyReLU()
-        self.xD1 = layers.Dense(512, name = 'parameter1_layer_2')
+        self.xD1 = SpectralNormalization(layers.Dense(512, name = 'parameter1_layer_2'))
         self.xR1 = layers.LeakyReLU()
-        self.xD2 = layers.Dense(512, name = 'parameter1_layer_3')
+        self.xD2 = SpectralNormalization(layers.Dense(512, name = 'parameter1_layer_3'))
         self.xR2 = layers.LeakyReLU()
 
-        self.yD0 = layers.Dense(512, name = 'parameter2_layer_1')
+        self.yD0 = SpectralNormalization(layers.Dense(512, name = 'parameter2_layer_1'))
         self.yR0 = layers.LeakyReLU()
-        self.yD1 = layers.Dense(512, name = 'parameter2_layer_2')
+        self.yD1 = SpectralNormalization(layers.Dense(512, name = 'parameter2_layer_2'))
         self.yR1 = layers.LeakyReLU()
-        self.yD2 = layers.Dense(512, name = 'parameter2_layer_3')
+        self.yD2 = SpectralNormalization(layers.Dense(512, name = 'parameter2_layer_3'))
         self.yR2 = layers.LeakyReLU()
 
-        self.zD0 = layers.Dense(512, name = 'parameter3_layer_1')
+        self.zD0 = SpectralNormalization(layers.Dense(512, name = 'parameter3_layer_1'))
         self.zR0 = layers.LeakyReLU()
-        self.zD1 = layers.Dense(512, name = 'parameter3_layer_2')
+        self.zD1 = SpectralNormalization(layers.Dense(512, name = 'parameter3_layer_2'))
         self.zR1 = layers.LeakyReLU()
-        self.zD2 = layers.Dense(512, name = 'parameter3_layer_3')
+        self.zD2 = SpectralNormalization(layers.Dense(512, name = 'parameter3_layer_3'))
         self.zR2 = layers.LeakyReLU()
 
-        self.concateD = layers.Dense(ch*8)
+        self.concateD = SpectralNormalization(layers.Dense(ch*16))
         self.concateR = layers.LeakyReLU()
 
         # self.conv0 = SpectralNormalization(layers.Conv3D(ch, kernel_size=3, strides=2, padding='same', use_bias=False))
@@ -44,14 +44,14 @@ class discriminator(tf.keras.Model):
         self.res1 = ResBlock_discriminator(ch*2, ksize=3)
         self.res2 = ResBlock_discriminator(ch*4, ksize=3)
         self.res3 = ResBlock_discriminator(ch*8, ksize=3)
-        # self.res4 = ResBlock_discriminator(ch*8, ksize=3)
-        # self.res5 = ResBlock_discriminator(ch*16, ksize=3)
+        self.res4 = ResBlock_discriminator(ch*8, ksize=3)
+        self.res5 = ResBlock_discriminator(ch*16, ksize=3)
        # self.res6 = ResBlock_discriminator(ch*16, ksize=5)
         #self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False))
         #self.GAV3D = layers.GlobalAveragePooling3D()
         #self.out = layers.Dense(1, kernel_initializer=initializers.he_normal())
         
-        self.outputD = layers.Dense(1)
+        self.outputD = SpectralNormalization(layers.Dense(1))
         
         #model = keras.Model(inputs = [dataInput], outputs = d)
        # plot_model(model, to_file = "WGAN_Discriminator.png", show_shapes=True)
@@ -88,8 +88,8 @@ class discriminator(tf.keras.Model):
         d = self.res1(d)
         d = self.res2(d)
         d = self.res3(d)
-        # d = self.res4(d)
-        # d = self.res5(d)
+        d = self.res4(d)
+        d = self.res5(d)
        # d = self.res6(d)
         #d = self.conv4(d)
         #d = self.resR(d)
