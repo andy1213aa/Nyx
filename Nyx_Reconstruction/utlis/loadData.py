@@ -6,29 +6,33 @@ from shutil import copyfile
 def generateData(dataSetConfig):
     
     dataType = {'float': [4, tf.float32]}
-    filename = os.listdir(dataSetConfig['dataSetDir'])
-
-
-
-    parameter1 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[5:12]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-    parameter2 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[13:20]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-    parameter3 = tf.data.Dataset.from_tensor_slices(np.array([np.float(file[21:28]) for file in filename], dtype=np.float32).reshape((len(filename), 1)))
-    parameter123 = tf.data.Dataset.zip((parameter1, parameter2, parameter3))
-
-    filename_list = [os.path.join(dataSetConfig['dataSetDir'], file) for file in filename]
-    file_queue = tf.data.Dataset.from_tensor_slices(filename_list)
-    data = tf.data.FixedLengthRecordDataset(file_queue, dataSetConfig['width']*dataSetConfig['length']*dataSetConfig['height']*dataType[dataSetConfig['dataType']][0])
     
-    def process_input_data(ds):
-        ds = tf.io.decode_raw(ds, dataType[dataSetConfig['dataType']][1])
-        ds = tf.reshape(ds, [dataSetConfig['width'], dataSetConfig['length'], dataSetConfig['height'], 1]) 
-        #mean = tf.reduce_mean(ds)
-        #std = tf.math.reduce_std(ds)      
-        return ds#(ds-mean)/std
+    def _parse_function(example_proto):
+        features = tf.io.parse_single_example(
+            example_proto,
+            features={
+                "Parameter1": tf.io.FixedLenFeature([], tf.float32),
+                "Parameter2": tf.io.FixedLenFeature([], tf.float32),
+                "Parameter3": tf.io.FixedLenFeature([], tf.float32),
+                'data_raw': tf.io.FixedLenFeature([], tf.string)
+            }
+        )
+     
+        P1 = features['Parameter1']
+        P2 = features['Parameter2']
+        P3 = features['Parameter3']
+        data = features['data_raw']
+        data = tf.io.decode_raw(data, tf.float32)
+        data = tf.reshape(data, [dataSetConfig['height'], dataSetConfig['width'], dataSetConfig['length'], 1])
+        P1 = tf.reshape(P1, [1])
+        P2 = tf.reshape(P2, [1])
+        P3 = tf.reshape(P3, [1])
+        return P1, P2, P3, data
         
     AUTOTUNE = tf.data.experimental.AUTOTUNE
-    data = data.map(process_input_data, num_parallel_calls=AUTOTUNE)
-    data = tf.data.Dataset.zip((parameter123, data))
+    data = tf.data.TFRecordDataset(dataSetConfig['dataSetDir'])
+    data = data.map(_parse_function, num_parallel_calls=AUTOTUNE)
+
     #data = data.shuffle(800, reshuffle_each_iteration=True)
     train_data = data.take(dataSetConfig['trainSize'])
     training = train_data.take(dataSetConfig['trainSize'])

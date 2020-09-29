@@ -58,7 +58,7 @@ def main():
             random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
 
             fake_data_by_random_parameter = gen([random_vector1, random_vector2, random_vector3],training = True)  #generate by random parameter
-            fake_data_by_real_parameter = gen([real_data[0][0], real_data[0][1], real_data[0][2]],training = True) #generate by real parameter
+            fake_data_by_real_parameter = gen([real_data[0], real_data[1], real_data[2]],training = True) #generate by real parameter
 
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
             fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
@@ -77,7 +77,7 @@ def main():
             random_vector3 = tf.random.uniform(shape = (dataSetConfig['batchSize'], 1), minval=0.55, maxval=0.9)
 
             fake_data = gen([random_vector1, random_vector2, random_vector3],training = True)
-            real_logit = dis([real_data[0][0], real_data[0][1], real_data[0][2], real_data[1]], training = True)
+            real_logit = dis([real_data[0], real_data[1], real_data[2], real_data[3]], training = True)
             # real_logit = dis(real_data[1] , training = True)
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
             fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data], training = True)
@@ -129,10 +129,10 @@ def main():
                
 
            # print(f'Epoch: {saveModel.epoch:6} Step: {step:3} dLoss: {d_loss} gLoss: {g_loss} ')    
-        predi_data = gen([list(validating_batch.as_numpy_iterator())[0][0][0], list(validating_batch.as_numpy_iterator())[0][0][1], list(validating_batch.as_numpy_iterator())[0][0][2]])
+        predi_data = gen([list(validating_batch.as_numpy_iterator())[0][0], list(validating_batch.as_numpy_iterator())[0][1], list(validating_batch.as_numpy_iterator())[0][2]])
         #l2 = (tf.norm(tensor = list(validating_batch.as_numpy_iterator())[0][1]-predi_data)/dataSetConfig['validationSize'])/  (data_max - data_min) *100
-        l2 = tf.reduce_mean(tf.math.sqrt(tf.reduce_sum(((list(validating_batch.as_numpy_iterator())[0][1]-predi_data)**2), axis = (1, 2, 3)))/ datarange) * 100
-        RMSE_percentage = np.mean(np.sqrt(np.mean(((list(validating_batch.as_numpy_iterator())[0][1]-predi_data))**2, axis = (1, 2, 3))) / datarange) * 100
+        l2 = tf.reduce_mean(tf.math.sqrt(tf.reduce_sum(((list(validating_batch.as_numpy_iterator())[0][3]-predi_data)**2), axis = (1, 2, 3)))/ datarange) * 100
+        RMSE_percentage = np.mean(np.sqrt(np.mean(((list(validating_batch.as_numpy_iterator())[0][3]-predi_data))**2, axis = (1, 2, 3))) / datarange) * 100
         #RMSE_percentage =  (tf.sqrt(tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1] - predi_data)**2)) / (data_max - data_min)) *100   
         #RSquard = 1- tf.reduce_mean((list(validating_batch.as_numpy_iterator())[0][1]-predi_data)**2)/ tf.math.reduce_variance(list(validating_batch.as_numpy_iterator())[0][1])
         with summary_writer.as_default():

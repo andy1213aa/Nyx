@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import datetime
 import os
-from shutil import copyfile
+from shutil import copytree, copyfile
 class SaveModel(tf.keras.callbacks.Callback):
     def __init__(self, gen, dis, dataSetConfig, mode = 'min', save_weights_only = True):
         super(SaveModel, self).__init__()
@@ -22,17 +22,14 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.counter = 0
         self.training = True
         self.epoch = 1
-        self.genDir = dataSetConfig['logDir'] + "gen/"
-        self.disDir = dataSetConfig['logDir'] + "dis/"
-        copyfile('generator.py', dataSetConfig['logDir'] + "generator.py")
-        copyfile('resblock.py', dataSetConfig['logDir'] + "resblock.py")
-        copyfile('discriminator.py', dataSetConfig['logDir'] + "discriminator.py")
-        copyfile('SpectralNormalization.py', dataSetConfig['logDir'] + "SpectralNormalization.py")
-        if not os.path.isdir(dataSetConfig['logDir'] + "gen/"):
+        self.genDir = dataSetConfig['logDir'] + "gen\\"
+        self.disDir = dataSetConfig['logDir'] + "dis\\"
+        if not os.path.isdir(dataSetConfig['logDir'] + "gen\\"):
             os.mkdir(dataSetConfig['logDir'] + "gen/")
-        if not os.path.isdir(dataSetConfig['logDir'] + "dis/"):
-            os.mkdir(dataSetConfig['logDir'] + "dis/")       
-            
+        if not os.path.isdir(dataSetConfig['logDir'] + "dis\\"):
+            os.mkdir(dataSetConfig['logDir'] + "dis/")
+        copytree(r'E:\NTNU1-2\Nyx\NyxCode\Nyx_Reconstruction', dataSetConfig['logDir']+'Nyx_Reconstruction\\')        
+        copyfile(r'E:\NTNU1-2\Nyx\NyxCode\main.py', dataSetConfig['logDir'] + 'main.py')
           
     def save_model(self):
         if self.save_weights_only:

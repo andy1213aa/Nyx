@@ -3,7 +3,7 @@ import datetime
 # logfile dirs name by time
 #============================
 startingTime=datetime.datetime.now()
-startingDate = f'{startingTime.year}-{startingTime.month}-{startingTime.day}'+'_'+f'{startingTime.hour}-{startingTime.minute}'
+startingDate = f'{startingTime.year}_{startingTime.month}_{startingTime.day}'+'_'+f'{startingTime.hour}_{startingTime.minute}'
 #============================
 
 Nyx={
@@ -13,7 +13,7 @@ Nyx={
 'trainSize' : 699,
 'validationSize':59, 
 'testSize' : 100,
-'batchSize' :32,
+'batchSize' :4,
 'length' : 64,
 'width' : 64,
 'height' : 64,
@@ -21,9 +21,9 @@ Nyx={
 'numberOfParameter' : 3,
 'numberOfParameterDigit' : 7,
 'stopConsecutiveEpoch' : 100,
-'dataSetDir' : '/home/csun001/Nyx/NyxDataSet/NyxDataSet64_64_64',
+'dataSetDir' : r'E:\NTNU1-2\Nyx\NyxDataSet\Nyx_tfrecords\NyxDataSet64_64_64.tfrecords',
 'startingTime' : startingTime,
-'logDir' : '/home/csun001/Nyx/NyxDataSet/log/' + startingDate + '/'
+'logDir' : 'E:\\NTNU1-2\\Nyx\\NyxDataSet\\wgan\\Nyx-' + startingDate + '\\'
 }
 
 dataSet = {'Nyx':Nyx}
