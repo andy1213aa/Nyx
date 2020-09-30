@@ -114,7 +114,7 @@ def main():
     saveModel = SaveModel(gen,dis, dataSetConfig, mode = 'min', save_weights_only=True)   #建立一個訓練規則
     datarange = np.zeros((dataSetConfig['validationSize']))
     for i in range(dataSetConfig['validationSize']):
-        datarange[i] = np.max(list(validating_batch.as_numpy_iterator())[0][1][i]) - np.min(list(validating_batch.as_numpy_iterator())[0][1][i])
+        datarange[i] = np.max(list(validating_batch.as_numpy_iterator())[0][3][i]) - np.min(list(validating_batch.as_numpy_iterator())[0][3][i])
     # data_max = tf.reduce_max(list(validating_batch.as_numpy_iterator())[0][1])
     # data_min = tf.reduce_min(list(validating_batch.as_numpy_iterator())[0][1])
     # dataRange = data_max - data_min
@@ -141,9 +141,8 @@ def main():
                 #tf.summary.scalar('RMSE-percentage', l2, step)
             tf.summary.scalar('discriminator_loss', dRealLoss+dFakeLoss, saveModel.epoch)
             tf.summary.scalar('generator_loss', gFakeLoss, saveModel.epoch)
-            for i in range(predi_data.shape[0]):
-                tf.summary.histogram(f'predict data {i}', predi_data[i], saveModel.epoch)
-                tf.summary.histogram(f'raw data {i}', list(validating_batch.as_numpy_iterator())[0][1][i], saveModel.epoch)
+            tf.summary.histogram(f'predict data', predi_data[0], saveModel.epoch)
+            tf.summary.histogram(f'raw data', list(validating_batch.as_numpy_iterator())[0][3][0], saveModel.epoch)
         #    dataRange = tf.reduce_max(real_data[1]) - tf.reduce_min(real_data[1])
         #RMSE_percentage =  (tf.sqrt(tf.reduce_mean((real_data[1] - predi_data)**2)) / dataRange)*100
            # Average_percentage += RMSE_percentage

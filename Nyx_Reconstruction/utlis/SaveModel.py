@@ -22,14 +22,14 @@ class SaveModel(tf.keras.callbacks.Callback):
         self.counter = 0
         self.training = True
         self.epoch = 1
-        self.genDir = dataSetConfig['logDir'] + "gen\\"
-        self.disDir = dataSetConfig['logDir'] + "dis\\"
-        if not os.path.isdir(dataSetConfig['logDir'] + "gen\\"):
+        self.genDir = dataSetConfig['logDir'] + "gen/"
+        self.disDir = dataSetConfig['logDir'] + "dis/"
+        if not os.path.isdir(dataSetConfig['logDir'] + "gen/"):
             os.mkdir(dataSetConfig['logDir'] + "gen/")
-        if not os.path.isdir(dataSetConfig['logDir'] + "dis\\"):
+        if not os.path.isdir(dataSetConfig['logDir'] + "dis/"):
             os.mkdir(dataSetConfig['logDir'] + "dis/")
-        copytree(r'E:\NTNU1-2\Nyx\NyxCode\Nyx_Reconstruction', dataSetConfig['logDir']+'Nyx_Reconstruction\\')        
-        copyfile(r'E:\NTNU1-2\Nyx\NyxCode\main.py', dataSetConfig['logDir'] + 'main.py')
+        copytree('/home/csun001/Nyx/NyxCode/Nyx_Reconstruction', dataSetConfig['logDir']+'Nyx_Reconstruction/')        
+        copyfile('/home/csun001/Nyx/NyxCode/main.py', dataSetConfig['logDir'] + 'main.py')
           
     def save_model(self):
         if self.save_weights_only:

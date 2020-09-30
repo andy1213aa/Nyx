@@ -47,18 +47,18 @@ class generator(tf.keras.Model):
         # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
         #self.gRes0 = ResBlock_generator(16*ch)
        # self.gRes1 = ResBlock_generator(8*ch, ksize=3)
-        self.gRes2 = ResBlock_generator(8*ch, ksize=3)
-        self.gRes3 = ResBlock_generator(4*ch, ksize=3)
-        self.gRes4 = ResBlock_generator(2*ch, ksize=3)
+        self.gRes2 = ResBlock_generator(8*ch)
+        self.gRes3 = ResBlock_generator(4*ch)
+        self.gRes4 = ResBlock_generator(2*ch)
         #self.gR0 = layers.LeakyReLU()
-        self.gRes5 = ResBlock_generator(ch, ksize=3)
+        self.gRes5 = ResBlock_generator(ch)
         #g = layers.Conv3DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False)(g)
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
         self.gConv0 = layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False, kernel_initializer=initializers.he_normal())
         
-        #g = layers.Activation(tf.nn.tanh)(g)
+       # self.gOutput = layers.Activation(tf.nn.tanh)
         #plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
     
     def call(self, inputs):
@@ -101,5 +101,5 @@ class generator(tf.keras.Model):
         g = self.gRes5(g)
         #g = self.gR0(g)
         g = self.gConv0(g)
-
+       # g =  self.gOutput(g)
         return g

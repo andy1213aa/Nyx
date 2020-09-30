@@ -23,6 +23,9 @@ def generateData(dataSetConfig):
         P3 = features['Parameter3']
         data = features['data_raw']
         data = tf.io.decode_raw(data, tf.float32)
+        # mean = tf.reduce_mean(data)
+        # std = tf.math.reduce_std(data)
+        # data = (data-mean)/std
         data = tf.reshape(data, [dataSetConfig['height'], dataSetConfig['width'], dataSetConfig['length'], 1])
         P1 = tf.reshape(P1, [1])
         P2 = tf.reshape(P2, [1])

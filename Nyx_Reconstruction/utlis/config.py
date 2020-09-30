@@ -13,7 +13,7 @@ Nyx={
 'trainSize' : 699,
 'validationSize':59, 
 'testSize' : 100,
-'batchSize' :4,
+'batchSize' :16,
 'length' : 64,
 'width' : 64,
 'height' : 64,
@@ -21,9 +21,9 @@ Nyx={
 'numberOfParameter' : 3,
 'numberOfParameterDigit' : 7,
 'stopConsecutiveEpoch' : 100,
-'dataSetDir' : r'E:\NTNU1-2\Nyx\NyxDataSet\Nyx_tfrecords\NyxDataSet64_64_64.tfrecords',
+'dataSetDir' :  '/home/csun001/Nyx/NyxDataSet/Nyx_tfrecords/NyxDataSet64_64_64.tfrecords',
 'startingTime' : startingTime,
-'logDir' : 'E:\\NTNU1-2\\Nyx\\NyxDataSet\\wgan\\Nyx-' + startingDate + '\\'
+'logDir' : '/home/csun001/Nyx/NyxDataSet/log/Nyx_' + startingDate + '/'
 }
 
 dataSet = {'Nyx':Nyx}
