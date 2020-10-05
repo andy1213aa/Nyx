@@ -8,39 +8,39 @@ class generator(tf.keras.Model):
     def __init__(self, ch= 16):
         super(generator, self).__init__()
         self.ch = ch
-        self.xD0 = layers.Dense(512, name = 'parameter1_layer_1', kernel_initializer=initializers.he_normal())
+        self.xD0 = layers.Dense(512, name = 'parameter1_layer_1')
         # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         self.xR0 = layers.LeakyReLU()
-        self.xD1 = layers.Dense(512, name = 'parameter1_layer_2', kernel_initializer=initializers.he_normal())
+        self.xD1 = layers.Dense(512, name = 'parameter1_layer_2')
         # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         self.xR1 = layers.LeakyReLU()
-        self.xD2 = layers.Dense(512, name = 'parameter1_layer_3', kernel_initializer=initializers.he_normal())
+        self.xD2 = layers.Dense(512, name = 'parameter1_layer_3')
         # if self.hparams[HP_BN_UNITS] : x = layers.BatchNormalization()(x)
         self.xR2 = layers.LeakyReLU()
         
-        self.yD0 = layers.Dense(512, name = 'parameter2_layer_1', kernel_initializer=initializers.he_normal())
+        self.yD0 = layers.Dense(512, name = 'parameter2_layer_1')
         # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         self.yR0 = layers.LeakyReLU()
-        self.yD1 = layers.Dense(512, name = 'parameter2_layer_2', kernel_initializer=initializers.he_normal())
+        self.yD1 = layers.Dense(512, name = 'parameter2_layer_2')
         # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         self.yR1 = layers.LeakyReLU()
-        self.yD2 = layers.Dense(512, name = 'parameter2_layer_3', kernel_initializer=initializers.he_normal())
+        self.yD2 = layers.Dense(512, name = 'parameter2_layer_3')
         # if self.hparams[HP_BN_UNITS] : y = layers.BatchNormalization()(y)
         self.yR2 = layers.LeakyReLU()
 
         
-        self.zD0 = layers.Dense(512, name = 'parameter3_layer_1', kernel_initializer=initializers.he_normal())
+        self.zD0 = layers.Dense(512, name = 'parameter3_layer_1')
         # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         self.zR0 = layers.LeakyReLU()
-        self.zD1 = layers.Dense(512, name = 'parameter3_layer_2', kernel_initializer=initializers.he_normal())
+        self.zD1 = layers.Dense(512, name = 'parameter3_layer_2')
         # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         self.zR1 = layers.LeakyReLU()
-        self.zD2 = layers.Dense(512, name = 'parameter3_layer_3', kernel_initializer=initializers.he_normal())
+        self.zD2 = layers.Dense(512, name = 'parameter3_layer_3')
         # if self.hparams[HP_BN_UNITS] : z = layers.BatchNormalization()(z)
         self.zR2 = layers.LeakyReLU()
 
         
-        self.gD0 =layers.Dense(ch*8*4*4*4, kernel_initializer=initializers.he_normal())
+        self.gD0 =layers.Dense(ch*2*4*4*4)
         # self.convT0 = layers.Conv3DTranspose(2*ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
         # self.convT1 = layers.Conv3DTranspose(ch,  kernel_size=3, strides=2, padding='same', use_bias=False)
         # self.gR1 = layers.LeakyReLU()
@@ -56,7 +56,7 @@ class generator(tf.keras.Model):
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
-        self.gConv0 = layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False, kernel_initializer=initializers.he_normal())
+        self.gConv0 = layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False)
         
        # self.gOutput = layers.Activation(tf.nn.tanh)
         #plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
@@ -87,7 +87,7 @@ class generator(tf.keras.Model):
 
         xyz = layers.concatenate([x, y, z])
         xyz = self.gD0(xyz)
-        xyz = layers.Reshape((4, 4, 4, 8*self.ch))(xyz)
+        xyz = layers.Reshape((4, 4, 4, 2*self.ch))(xyz)
 
         # g = self.convT0(xyz)
         # g = self.gR0(g)

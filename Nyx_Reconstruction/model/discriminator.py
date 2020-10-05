@@ -44,10 +44,10 @@ class discriminator(tf.keras.Model):
         self.res1 = ResBlock_discriminator(ch*2)
         self.res2 = ResBlock_discriminator(ch*4)
         self.res3 = ResBlock_discriminator(ch*8)
-        # self.res4 = ResBlock_discriminator(ch*8, ksize=3)
-        # self.res5 = ResBlock_discriminator(ch*16, ksize=3)
+        self.res4 = ResBlock_discriminator(ch*8, ksize=3)
+        self.res5 = ResBlock_discriminator(ch*16, ksize=3)
        # self.res6 = ResBlock_discriminator(ch*16, ksize=5)
-        self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=4, strides=1, padding='valid', use_bias=False))
+        self.conv4 = SpectralNormalization(layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False))
         #self.GAV3D = layers.GlobalAveragePooling3D()
         #self.out = layers.Dense(1, kernel_initializer=initializers.he_normal())
         
@@ -94,10 +94,10 @@ class discriminator(tf.keras.Model):
         d = self.res1(d)
         d = self.res2(d)
         d = self.res3(d)
-        # d = self.res4(d)
-        # d = self.res5(d)
+        d = self.res4(d)
+        d = self.res5(d)
        # d = self.res6(d)
-        d = self.conv4(d)
+        #d = self.conv4(d)
         #d = self.resR(d)
         #d = self.resR0(d)
         #d = layers.Flatten()(d)
@@ -110,7 +110,7 @@ class discriminator(tf.keras.Model):
       
         f1 = layers.Multiply()([d, xyz])
         
-        f1 = tf.math.reduce_sum(f1, axis = 1, keepdims=True)
+        # f1 = tf.math.reduce_sum(f1, axis = 1, keepdims=True)
     
         f2 = self.outputD(d)
 

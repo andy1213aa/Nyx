@@ -13,7 +13,7 @@ Nyx={
 'trainSize' : 699,
 'validationSize':59, 
 'testSize' : 100,
-'batchSize' :16,
+'batchSize' :32,
 'length' : 64,
 'width' : 64,
 'height' : 64,
