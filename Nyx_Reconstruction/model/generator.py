@@ -46,7 +46,7 @@ class generator(tf.keras.Model):
         # self.gR1 = layers.LeakyReLU()
         # g = SpectralNormalization(layers.Conv2DTranspose((2**i)*self.filterNumber, kernel_size=3, strides=2, padding='same', use_bias=False))(g)
         #self.gRes0 = ResBlock_generator(16*ch)
-       # self.gRes1 = ResBlock_generator(8*ch, ksize=3)
+        self.gRes1 = ResBlock_generator(8*ch)
         self.gRes2 = ResBlock_generator(8*ch)
         self.gRes3 = ResBlock_generator(4*ch)
         self.gRes4 = ResBlock_generator(2*ch)
@@ -56,7 +56,7 @@ class generator(tf.keras.Model):
         
 
         #g = SpectralNormalization(layers.Conv2DTranspose(1, kernel_size=3, strides=1, padding='same', use_bias=False))(g)
-        self.gConv0 = layers.Conv3D(1, kernel_size=3, strides=1, padding='same', use_bias=False)
+        self.gConv0 = layers.Conv3D(1, kernel_size=5, strides=1, padding='same', use_bias=False)
         
        # self.gOutput = layers.Activation(tf.nn.tanh)
         #plot_model(model, to_file='WGAN_generator.png', show_shapes=True)
@@ -87,6 +87,7 @@ class generator(tf.keras.Model):
 
         xyz = layers.concatenate([x, y, z])
         xyz = self.gD0(xyz)
+        xyz = layers.ReLU()(xyz)
         xyz = layers.Reshape((4, 4, 4, 2*self.ch))(xyz)
 
         # g = self.convT0(xyz)
@@ -94,8 +95,8 @@ class generator(tf.keras.Model):
         # g = self.convT1(g)
         # g = self.gR1(g)
         #g = self.gRes0(xyz)
-        #g = self.gRes1(xyz)
-        g = self.gRes2(xyz)
+        g = self.gRes1(xyz)
+        g = self.gRes2(g)
         g = self.gRes3(g)
         g = self.gRes4(g)
         g = self.gRes5(g)
