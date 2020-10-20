@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import layers, initializers
-from .SpectralNormalization import SpectralNormalization
+import tensorflow_addons as tfa
 class ResBlock_generator(layers.Layer):
   def __init__(self, out_shape, strides=1, ksize = 3):
       super(ResBlock_generator, self).__init__()
@@ -42,14 +42,14 @@ class ResBlock_discriminator(layers.Layer):
   def __init__(self, out_shape, strides=1,ksize= 3):
       super(ResBlock_discriminator, self).__init__()
 
-      self.conv_0 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=ksize,strides=2 ,padding='same', name = 'rd_conv1', use_bias=False))
+      self.conv_0 = tfa.layers.SpectralNormalization(layers.Conv3D(out_shape,kernel_size=ksize,strides=2 ,padding='same', name = 'rd_conv1', use_bias=False))
       self.PRelu0 = layers.LeakyReLU()
      # self.PRelu1 = layers.PReLU()
-      #self.conv_1 = SpectralNormalization(layers.Conv3D(out_shape,kernel_size=ksize,strides=1,padding='same', name = 'rd_conv2',  use_bias=False))
+      #self.conv_1 = tfa.layers.SpectralNormalization(layers.Conv3D(out_shape,kernel_size=ksize,strides=1,padding='same', name = 'rd_conv2',  use_bias=False))
       #self.average_pool0 = layers.AveragePooling3D()
 
       #shortcut
-      # self.conv_shortcut = SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='valid', use_bias=False))
+      # self.conv_shortcut = tfa.layers.SpectralNormalization(layers.Conv3D(out_shape, kernel_size=1 ,strides=2, padding='valid', use_bias=False))
       #self.average_pool2 = layers.AveragePooling3D()
 
 

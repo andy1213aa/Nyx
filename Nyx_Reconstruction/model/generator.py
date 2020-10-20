@@ -1,7 +1,7 @@
 from ..resiual_layer.resblock import ResBlock_generator
 import tensorflow as tf
 from tensorflow.keras import layers, initializers
-from ..resiual_layer.SpectralNormalization import SpectralNormalization
+
 #from IPython.display import Image
 
 class generator(tf.keras.Model):

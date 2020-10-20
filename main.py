@@ -63,11 +63,10 @@ def main():
             fake_logit = dis(fake_data_by_random_parameter, training = False)
             #fake_logit = dis([random_vector1, random_vector2, random_vector3, fake_data_by_random_parameter], training = False)
             fake_loss, l2_norm = generator_loss(fake_logit, real_data, fake_data_by_real_parameter)
-            gLoss = fake_loss+L2_coefficient*l2_norm
+            gLoss = L2_coefficient*l2_norm + fake_loss
         gradients = tape.gradient(gLoss, gen.trainable_variables)
         genOptimizer.apply_gradients(zip(gradients, gen.trainable_variables))
-        return fake_loss, l2_norm
-
+        return fake_loss, L2_coefficient*l2_norm
     @tf.function
     def train_discriminator(real_data):
         print('DIS GRAPH SIDE EFFECT')
@@ -98,7 +97,7 @@ def main():
     dis = discriminator()
 
 
-    L2_coefficient = 10# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
+    L2_coefficient = 1e-4# 1/(dataSetConfig['length'] * dataSetConfig['width'] * dataSetConfig['height'])
     
     disOptimizer = tf.keras.optimizers.RMSprop(lr = 0.0001, clipvalue = 1.0, decay = 1e-8)
     # disOptimizer = tf.keras.optimizers.Adam(lr = 0.0001,beta_1=0.5, beta_2 = 0.999,  clipvalue = 1.0, decay = 1e-8)
@@ -118,7 +117,7 @@ def main():
     data_max = tf.reduce_max(list(validating_batch.as_numpy_iterator())[0][3])
     data_min = tf.reduce_min(list(validating_batch.as_numpy_iterator())[0][3])
     # dataRange = data_max - data_min
-    tf.while_loop(saveModel.training):
+    while saveModel.training:
        # Average_percentage = 0
         for step, real_data in enumerate(training_batch):
             # real_data 中 real_data[0] 代表三input parameter 也就是 real_data[0][0] real_data[0][1] 和 real_data[0][2], real_data[1] 代表 groundtruth
@@ -138,9 +137,13 @@ def main():
             tf.summary.scalar('RMSE-percentage', RMSE_percentage, saveModel.epoch)
                  #hp.hparams(hparams)
                 #tf.summary.scalar('RMSE-percentage', l2, step)
-            tf.summary.scalar('discriminator_loss', dRealLoss+dFakeLoss, saveModel.epoch)
-            tf.summary.scalar('generator_loss', gFakeLoss+gL2Loss, saveModel.epoch)
-            for i in range(0, predi_data.shape[0], 10):
+            tf.summary.scalar('discriminator_loss_D(x)', dRealLoss, saveModel.epoch)
+            tf.summary.scalar('discriminator_loss_D(G(z))', dFakeLoss, saveModel.epoch)
+            tf.summary.scalar('discriminator_loss_Total', dRealLoss+dFakeLoss, saveModel.epoch)
+            tf.summary.scalar('generator_loss_D(g(z))', gFakeLoss, saveModel.epoch)
+            tf.summary.scalar('generator_loss_L2_loss', gL2Loss, saveModel.epoch)
+            tf.summary.scalar('generator_loss_Total', gFakeLoss+gL2Loss, saveModel.epoch)
+            for i in range(0, predi_data.shape[0], 5):
                 tf.summary.histogram(f'predict data', predi_data[i], saveModel.epoch)
                 tf.summary.histogram(f'raw data', list(validating_batch.as_numpy_iterator())[0][3][i], saveModel.epoch)
         #    dataRange = tf.reduce_max(real_data[1]) - tf.reduce_min(real_data[1])
